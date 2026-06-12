@@ -37,6 +37,7 @@ class AnalyzerTests(unittest.TestCase):
                 "recommended_roles",
                 "recommendations",
                 "next_steps",
+                "ml_prediction",
             },
         )
         self.assertIsInstance(first_result["score"], int)
@@ -49,6 +50,16 @@ class AnalyzerTests(unittest.TestCase):
         )
         self.assertEqual(len(first_result["recommended_roles"]), 3)
         self.assertEqual(len(first_result["next_steps"]), 5)
+        self.assertEqual(
+            set(first_result["ml_prediction"]),
+            {
+                "predicted_category",
+                "display_category",
+                "confidence",
+                "source",
+                "message",
+            },
+        )
 
         for category in first_result["category_analysis"]:
             self.assertIsInstance(category["score"], int)

@@ -36,6 +36,11 @@ The main analyzer logic should stay inside backend/services so it remains reusab
 
 Status: Completed with deterministic, explainable rules and skill-based role alignment.
 
+## Phase 6.5, ML Role Classifier
+
+Goal: Train and integrate a simple TF-IDF classifier to predict a
+resume/profile category while keeping the Phase 6 rule-based analyzer.
+
 ## Phase 7, Resume Upload
 
 Goal: Add PDF, DOCX, and TXT upload support using PyMuPDF and python-docx.

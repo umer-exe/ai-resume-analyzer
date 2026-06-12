@@ -1,5 +1,6 @@
 # Backend
 backend/.venv/
+backend/data/
 backend/uploads/*
 __pycache__/
 *.pyc

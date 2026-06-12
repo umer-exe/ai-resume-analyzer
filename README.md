@@ -10,9 +10,13 @@ scoring, recommendations, and role alignment. Role suggestions compare the
 submitted profile with fixed skill requirements; they are not live job
 listings or real-time job matching.
 
+Phase 6.5 adds an optional local TF-IDF classifier for resume category
+prediction. It supports the rule-based report and does not replace its scores,
+skill detection, recommendations, or roadmap.
+
 ## Tech Stack
 
-* Backend: Python, Flask, flask-cors
+* Backend: Python, Flask, flask-cors, pandas, scikit-learn, joblib
 * Frontend: Next.js App Router, React, JavaScript
 * Styling: Tailwind CSS
 
@@ -32,6 +36,26 @@ python app.py
 ```
 
 The API runs at `http://127.0.0.1:5000`.
+
+## Train the Optional ML Classifier
+
+Place the dataset at:
+
+```text
+backend/data/resume_dataset.csv
+```
+
+Then run:
+
+```powershell
+cd backend
+python ml/train_model.py
+```
+
+The script compares TF-IDF with Multinomial Naive Bayes and Logistic
+Regression, then saves the better pipeline to
+`backend/models/resume_role_classifier.pkl`. ML prediction remains optional
+until this model has been trained.
 
 ## Frontend Setup
 
@@ -72,3 +96,10 @@ All API responses use this shape:
 The endpoint returns deterministic rule-based analysis. It does not perform
 resume upload or document parsing and does not use Gemini, OpenAI, or another
 external AI API.
+
+## Tests
+
+```powershell
+cd backend
+python -m unittest discover -s tests
+```

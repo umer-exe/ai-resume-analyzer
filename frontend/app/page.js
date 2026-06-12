@@ -96,6 +96,10 @@ function clampPercentage(value) {
   return Math.min(100, Math.max(0, Math.round(percentage)));
 }
 
+function formatCategoryLabel(category) {
+  return String(category).replaceAll("_", " ");
+}
+
 function SectionLabel({ children }) {
   return (
     <p className="text-xs font-semibold tracking-[0.18em] text-[#166534]">
@@ -216,6 +220,13 @@ function StatusBadge({ status }) {
 function OverviewTab({ result }) {
   const score = clampPercentage(result.score);
   const checks = result.checks ?? {};
+  const mlPrediction = result.ml_prediction ?? {};
+  const mlCategory =
+    mlPrediction.display_category ||
+    (mlPrediction.predicted_category
+      ? formatCategoryLabel(mlPrediction.predicted_category)
+      : "");
+  const mlConfidence = clampPercentage(mlPrediction.confidence);
 
   return (
     <div className="space-y-5">
@@ -236,10 +247,13 @@ function OverviewTab({ result }) {
           </div>
           <div className="sm:text-right">
             <p className="text-xs font-semibold tracking-wide text-[#6B7280]">
-              TOP MATCHED ROLE
+              RULE-BASED BEST MATCH
             </p>
             <p className="mt-2 text-sm font-semibold text-[#111827]">
               {result.top_role}
+            </p>
+            <p className="mt-1 max-w-56 text-xs leading-5 text-[#9CA3AF]">
+              Based on deterministic analyzer skill matching.
             </p>
           </div>
         </div>
@@ -272,6 +286,33 @@ function OverviewTab({ result }) {
             </p>
           </article>
         ))}
+      </section>
+
+      <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
+        <SectionLabel>ML CATEGORY PREDICTION</SectionLabel>
+        {mlCategory ? (
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-[#111827]">
+                {mlCategory}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[#6B7280]">
+                Predicted by the trained TF-IDF classifier.
+              </p>
+            </div>
+            <p className="text-sm font-semibold text-[#166534]">
+              {mlConfidence}% confidence
+            </p>
+          </div>
+        ) : mlPrediction.message ? (
+          <p className="mt-3 text-sm text-[#6B7280]">
+            {mlPrediction.message}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-[#6B7280]">
+            No ML category prediction is available for this report.
+          </p>
+        )}
       </section>
 
       <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
@@ -627,7 +668,8 @@ export default function Home() {
               {isLoading ? "Analyzing..." : "Analyze Profile"}
             </button>
             <p className="mt-3 text-center text-xs text-[#9CA3AF]">
-              Rule-based skill alignment only. This is not live job matching.
+              Rule-based analysis with optional ML category prediction. This is
+              not live job matching.
             </p>
           </form>
 

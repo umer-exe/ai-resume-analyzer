@@ -299,3 +299,44 @@ Phase 6 is completed with deterministic rule-based analysis.
 
 Next Step:
 Phase 7 will add PDF, DOCX, and TXT resume upload and parsing.
+
+### Update 5
+
+Phase: Phase 6.5, ML Role Classifier
+
+Completed By: Team
+
+Date: June 12, 2026
+
+Files Added or Updated:
+
+* .gitignore
+* backend/requirements.txt
+* backend/ml/train_model.py
+* backend/services/ml_classifier.py
+* backend/services/analyzer.py
+* backend/tests/test_phase6.py
+* backend/tests/test_phase65.py
+* frontend/app/page.js
+* README.md
+* PLAN.md
+* IMPLEMENTATION.md
+
+Summary:
+An optional local ML classifier service and training script were added. The
+training script compares TF-IDF pipelines using Multinomial Naive Bayes and
+Logistic Regression, prints evaluation results, and saves the better model
+locally. The analyzer now includes an additive `ml_prediction` result while the
+Phase 6 rule-based analyzer continues to handle scores, skills,
+recommendations, role alignment, and the career roadmap.
+
+The dataset remains local at `backend/data/resume_dataset.csv` and the entire
+`backend/data/` directory is ignored by Git. The frontend Overview tab shows a
+compact ML suggested category when a trained model is available, or a quiet
+fallback message when it is not.
+
+Current Status:
+Phase 6.5 is complete without upload or document parsing.
+
+Next Step:
+Phase 7 will add PDF, DOCX, and TXT resume upload and parsing.

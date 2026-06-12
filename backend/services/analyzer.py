@@ -3,6 +3,8 @@
 import re
 from functools import lru_cache
 
+from services.ml_classifier import predict_role
+
 
 SKILL_CATALOG = {
     "Programming": [
@@ -639,6 +641,7 @@ def analyze_profile(profile_text):
         f"alignment to {top_role['role']}. Focus next on {weak_area_text}. "
         "Role suggestions are based on profile skills and are not live job matching."
     )
+    ml_prediction = predict_role(profile_text)
 
     return {
         "score": overall_score,
@@ -651,4 +654,5 @@ def analyze_profile(profile_text):
         "recommended_roles": role_matches,
         "recommendations": _build_recommendations(category_analysis),
         "next_steps": _build_next_steps(category_analysis, top_role),
+        "ml_prediction": ml_prediction,
     }

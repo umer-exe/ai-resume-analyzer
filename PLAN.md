@@ -30,11 +30,12 @@ Goal: Improve the frontend result experience using dummy data by adding a tabbed
 
 ## Phase 6, Rule Based Analyzer
 
-Goal: Add basic skill detection, ATS score, strengths, weaknesses, role recommendations, and career roadmap.
+Goal: Add basic skill detection, ATS score, strengths, weaknesses,
+recommendations, and an action plan.
 
 The main analyzer logic should stay inside backend/services so it remains reusable.
 
-Status: Completed with deterministic, explainable rules and skill-based role alignment.
+Status: Completed with deterministic, explainable profile-quality analysis.
 
 ## Phase 6.5, ML Role Classifier
 

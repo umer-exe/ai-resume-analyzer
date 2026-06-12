@@ -4,13 +4,13 @@ import { useState } from "react";
 
 const API_URL = "http://127.0.0.1:5000/api/v1/analyze";
 
-const REPORT_TABS = ["Overview", "Analysis", "Recommendations", "Next Steps"];
+const REPORT_TABS = ["Overview", "Analysis", "Action Plan"];
 
 const LOADING_ITEMS = [
   "Reading profile text",
   "Checking profile structure",
   "Extracting skills",
-  "Matching career roles",
+  "Predicting resume category",
   "Preparing recommendations",
 ];
 
@@ -23,9 +23,8 @@ const SAMPLE_PROFILE =
 const REPORT_INCLUDES = [
   "Profile quality score",
   "Skill category breakdown",
-  "Role match suggestions",
+  "ML category prediction",
   "Priority recommendations",
-  "Career roadmap",
 ];
 
 const CHECK_SUMMARIES = [
@@ -57,24 +56,30 @@ const STATUS_STYLES = {
   Moderate: "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]",
 };
 
-const PRIORITY_SECTIONS = [
+const ACTION_PLAN_SECTIONS = [
   {
-    key: "high_priority",
-    label: "High Priority",
-    description: "Address these first for the strongest improvement.",
+    key: "priority",
+    label: "Priority Fixes",
+    description: "Start with the highest-impact profile improvements.",
     dotClass: "bg-[#B91C1C]",
   },
   {
-    key: "medium_priority",
-    label: "Medium Priority",
-    description: "Strengthen these areas after the essential changes.",
+    key: "skills",
+    label: "Skill Improvements",
+    description: "Strengthen role-relevant skills and keywords.",
     dotClass: "bg-[#D97706]",
   },
   {
-    key: "low_priority",
-    label: "Low Priority",
-    description: "Use these refinements to polish the final profile.",
+    key: "projects",
+    label: "Project Suggestions",
+    description: "Improve project evidence and technical presentation.",
     dotClass: "bg-[#166534]",
+  },
+  {
+    key: "profile",
+    label: "Resume/Profile Improvements",
+    description: "Improve clarity, structure, and professional presentation.",
+    dotClass: "bg-[#4B5563]",
   },
 ];
 
@@ -98,6 +103,71 @@ function clampPercentage(value) {
 
 function formatCategoryLabel(category) {
   return String(category).replaceAll("_", " ");
+}
+
+function uniqueItems(items) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+function includesAny(text, keywords) {
+  const normalizedText = text.toLowerCase();
+  return keywords.some((keyword) => normalizedText.includes(keyword));
+}
+
+function buildActionPlan(result) {
+  const recommendations = result.recommendations ?? {};
+  const priorityItems = uniqueItems(recommendations.high_priority ?? []);
+  const remainingItems = uniqueItems([
+    ...(recommendations.medium_priority ?? []),
+    ...(recommendations.low_priority ?? []),
+    ...(result.next_steps ?? []),
+  ]).filter((item) => !priorityItems.includes(item));
+
+  const sections = {
+    priority: priorityItems,
+    skills: [],
+    projects: [],
+    profile: [],
+  };
+
+  remainingItems.forEach((item) => {
+    if (
+      includesAny(item, [
+        "project",
+        "github",
+        "portfolio",
+        "repository",
+      ])
+    ) {
+      sections.projects.push(item);
+    } else if (
+      includesAny(item, [
+        "skill",
+        "keyword",
+        "tool",
+        "technology",
+      ])
+    ) {
+      sections.skills.push(item);
+    } else if (
+      includesAny(item, [
+        "profile",
+        "summary",
+        "format",
+        "section",
+        "sentence",
+        "education",
+        "experience",
+        "qualification",
+        "action verb",
+        "structure",
+      ])
+    ) {
+      sections.profile.push(item);
+    }
+  });
+
+  return sections;
 }
 
 function SectionLabel({ children }) {
@@ -220,6 +290,7 @@ function StatusBadge({ status }) {
 function OverviewTab({ result }) {
   const score = clampPercentage(result.score);
   const checks = result.checks ?? {};
+  const categoryAnalysis = result.category_analysis ?? [];
   const mlPrediction = result.ml_prediction ?? {};
   const mlCategory =
     mlPrediction.display_category ||
@@ -227,35 +298,32 @@ function OverviewTab({ result }) {
       ? formatCategoryLabel(mlPrediction.predicted_category)
       : "");
   const mlConfidence = clampPercentage(mlPrediction.confidence);
+  const topPredictions = mlPrediction.top_predictions ?? [];
+  const rankedCategories = [...categoryAnalysis].sort(
+    (first, second) =>
+      clampPercentage(second.score) - clampPercentage(first.score),
+  );
+  const strongestAreas = rankedCategories.slice(0, 2);
+  const improvementAreas = [...categoryAnalysis]
+    .sort(
+      (first, second) =>
+        clampPercentage(first.score) - clampPercentage(second.score),
+    )
+    .slice(0, 2);
 
   return (
     <div className="space-y-5">
       <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <SectionLabel>OVERALL SCORE</SectionLabel>
-            <div className="mt-3 flex items-center gap-3">
-              <p className="text-4xl font-semibold tracking-tight text-[#111827]">
-                {score}
-                <span className="text-base font-medium text-[#6B7280]">
-                  {" "}
-                  / 100
-                </span>
-              </p>
-              <StatusBadge status={result.status} />
-            </div>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs font-semibold tracking-wide text-[#6B7280]">
-              RULE-BASED BEST MATCH
-            </p>
-            <p className="mt-2 text-sm font-semibold text-[#111827]">
-              {result.top_role}
-            </p>
-            <p className="mt-1 max-w-56 text-xs leading-5 text-[#9CA3AF]">
-              Based on deterministic analyzer skill matching.
-            </p>
-          </div>
+        <SectionLabel>OVERALL SCORE</SectionLabel>
+        <div className="mt-3 flex items-center gap-3">
+          <p className="text-4xl font-semibold tracking-tight text-[#111827]">
+            {score}
+            <span className="text-base font-medium text-[#6B7280]">
+              {" "}
+              / 100
+            </span>
+          </p>
+          <StatusBadge status={result.status} />
         </div>
         <div
           className="mt-5 h-2 overflow-hidden rounded-full bg-[#EBEBEB]"
@@ -297,7 +365,7 @@ function OverviewTab({ result }) {
                 {mlCategory}
               </p>
               <p className="mt-1 text-xs leading-5 text-[#6B7280]">
-                Predicted by the trained TF-IDF classifier.
+                Predicted using the trained TF-IDF resume category classifier.
               </p>
             </div>
             <p className="text-sm font-semibold text-[#166534]">
@@ -313,6 +381,30 @@ function OverviewTab({ result }) {
             No ML category prediction is available for this report.
           </p>
         )}
+
+        {topPredictions.length > 1 && (
+          <div className="mt-4 border-t border-[#EBEBEB] pt-4">
+            <p className="text-xs font-semibold tracking-wide text-[#6B7280]">
+              TOP CATEGORY MATCHES
+            </p>
+            <div className="mt-3 space-y-2">
+              {topPredictions.slice(0, 3).map((prediction) => (
+                <div
+                  key={prediction.predicted_category}
+                  className="flex items-center justify-between gap-4 text-sm"
+                >
+                  <span className="text-[#4B5563]">
+                    {prediction.display_category ||
+                      formatCategoryLabel(prediction.predicted_category)}
+                  </span>
+                  <span className="font-medium text-[#166534]">
+                    {clampPercentage(prediction.confidence)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
@@ -320,6 +412,26 @@ function OverviewTab({ result }) {
         <p className="mt-3 text-sm leading-6 text-[#4B5563]">
           {result.summary}
         </p>
+        <div className="mt-4 grid gap-3 border-t border-[#EBEBEB] pt-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-[#6B7280]">
+              STRONGEST PROFILE AREAS
+            </p>
+            <p className="mt-2 text-sm text-[#374151]">
+              {strongestAreas.map((area) => area.category).join(", ") ||
+                "Not available"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-[#6B7280]">
+              MAIN IMPROVEMENT AREAS
+            </p>
+            <p className="mt-2 text-sm text-[#374151]">
+              {improvementAreas.map((area) => area.category).join(", ") ||
+                "Not available"}
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -396,69 +508,53 @@ function AnalysisTab({ result }) {
   );
 }
 
-function RecommendationsTab({ result }) {
+function ActionPlanTab({ result }) {
+  const actionPlan = buildActionPlan(result);
+
   return (
     <div className="space-y-4">
-      {PRIORITY_SECTIONS.map((section) => (
-        <section
+      {ACTION_PLAN_SECTIONS.map((section, index) => (
+        <details
           key={section.key}
-          className="rounded-xl border border-[#E4E2DC] bg-white p-5"
+          open={index === 0}
+          className="group rounded-xl border border-[#E4E2DC] bg-white"
         >
-          <div className="flex items-start gap-3">
+          <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
             <span
-              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${section.dotClass}`}
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${section.dotClass}`}
             />
-            <div>
-              <h3 className="font-semibold text-[#111827]">
-                {section.label}
-              </h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-[#111827]">{section.label}</h3>
               <p className="mt-1 text-xs leading-5 text-[#6B7280]">
                 {section.description}
               </p>
             </div>
-          </div>
-          <ul className="mt-4 space-y-3 border-t border-[#EBEBEB] pt-4">
-            {(result.recommendations?.[section.key] ?? []).map(
-              (recommendation) => (
-              <li
-                key={recommendation}
-                className="flex gap-3 text-sm leading-6 text-[#4B5563]"
-              >
-                <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9CA3AF]" />
-                <span>{recommendation}</span>
-              </li>
-              ),
+            <span className="text-lg text-[#6B7280] transition group-open:rotate-45">
+              +
+            </span>
+          </summary>
+          <div className="border-t border-[#EBEBEB] px-5 pb-5">
+            {actionPlan[section.key].length > 0 ? (
+              <ul className="space-y-3 pt-4">
+                {actionPlan[section.key].map((item) => (
+                  <li
+                    key={item}
+                    className="flex gap-3 text-sm leading-6 text-[#4B5563]"
+                  >
+                    <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9CA3AF]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="pt-4 text-sm text-[#9CA3AF]">
+                No additional items in this section.
+              </p>
             )}
-          </ul>
-        </section>
+          </div>
+        </details>
       ))}
     </div>
-  );
-}
-
-function NextStepsTab({ steps }) {
-  const roadmapSteps = steps ?? [];
-
-  return (
-    <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
-      <SectionLabel>CAREER ROADMAP</SectionLabel>
-      <h3 className="mt-2 text-lg font-semibold text-[#111827]">
-        Recommended next steps
-      </h3>
-      <ol className="mt-6">
-        {roadmapSteps.map((step, index) => (
-          <li key={step} className="relative flex gap-4 pb-6 last:pb-0">
-            {index < roadmapSteps.length - 1 && (
-              <span className="absolute left-4 top-8 h-full w-px bg-[#E4E2DC]" />
-            )}
-            <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#D9D7D1] bg-[#F5F4F1] text-xs font-semibold text-[#4B5563]">
-              {index + 1}
-            </span>
-            <p className="pt-1 text-sm leading-6 text-[#374151]">{step}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }
 
@@ -510,12 +606,7 @@ function ResultsReport({ result, activeTab, onTabChange }) {
       >
         {activeTab === "Overview" && <OverviewTab result={result} />}
         {activeTab === "Analysis" && <AnalysisTab result={result} />}
-        {activeTab === "Recommendations" && (
-          <RecommendationsTab result={result} />
-        )}
-        {activeTab === "Next Steps" && (
-          <NextStepsTab steps={result.next_steps} />
-        )}
+        {activeTab === "Action Plan" && <ActionPlanTab result={result} />}
       </div>
     </div>
   );

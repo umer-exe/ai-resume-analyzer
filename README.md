@@ -2,17 +2,16 @@
 
 A basic full-stack resume and profile analysis project for students and job
 seekers. The Next.js frontend sends profile text to a reusable Flask API and
-displays a profile score, grouped skills, category feedback, recommended
-career paths, priority improvements, and a career roadmap.
+displays a profile score, grouped skills, category feedback, an ML category
+prediction, recommended improvements, and an action plan.
 
 Phase 6 uses deterministic, explainable rules for skill detection, profile
-scoring, recommendations, and role alignment. Role suggestions compare the
-submitted profile with fixed skill requirements; they are not live job
-listings or real-time job matching.
+scoring, category analysis, recommendations, and the action plan.
 
 Phase 6.5 adds an optional local TF-IDF classifier for resume category
 prediction. It supports the rule-based report and does not replace its scores,
-skill detection, recommendations, or roadmap.
+skill detection, recommendations, or action plan. The ML classifier is the
+only category prediction source.
 
 ## Tech Stack
 

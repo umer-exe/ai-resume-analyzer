@@ -55,34 +55,6 @@ SKILL_CATALOG = {
     ],
 }
 
-ROLE_CATALOG = [
-    {
-        "role": "Python Developer Intern",
-        "required": ("Python", "Flask", "SQL"),
-        "optional": ("Django", "REST APIs", "GitHub"),
-    },
-    {
-        "role": "Junior Web Developer",
-        "required": ("HTML", "CSS", "JavaScript"),
-        "optional": ("React", "Flask", "GitHub"),
-    },
-    {
-        "role": "Data Analyst Intern",
-        "required": ("SQL", "Excel", "Data Visualization"),
-        "optional": ("Python", "Pandas", "Power BI"),
-    },
-    {
-        "role": "AI/ML Intern",
-        "required": ("Python", "Artificial Intelligence", "Machine Learning"),
-        "optional": ("Pandas", "NumPy", "GitHub"),
-    },
-    {
-        "role": "Cybersecurity/Networking Intern",
-        "required": ("Cybersecurity", "Networking", "Linux"),
-        "optional": ("Wireshark", "Python", "GitHub"),
-    },
-]
-
 CATEGORY_WEIGHTS = {
     "Skills": 0.25,
     "Projects": 0.20,
@@ -444,61 +416,6 @@ def _formatting_analysis(profile_text):
     return score, feedback
 
 
-def match_roles(grouped_skills):
-    """Return the top three skill-alignment suggestions with stable tie-breaking."""
-    detected_skills = set(_flatten_skills(grouped_skills))
-    matches = []
-
-    for catalog_index, role in enumerate(ROLE_CATALOG):
-        matched_required = [
-            skill for skill in role["required"] if skill in detected_skills
-        ]
-        matched_optional = [
-            skill for skill in role["optional"] if skill in detected_skills
-        ]
-        missing_required = [
-            skill for skill in role["required"] if skill not in detected_skills
-        ]
-        missing_optional = [
-            skill for skill in role["optional"] if skill not in detected_skills
-        ]
-
-        required_score = len(matched_required) / len(role["required"]) * 80
-        optional_score = len(matched_optional) / len(role["optional"]) * 20
-        match_percentage = _round_score(required_score + optional_score)
-
-        matches.append(
-            {
-                "role": role["role"],
-                "match_percentage": match_percentage,
-                "matched_skills": matched_required + matched_optional,
-                "missing_skills": missing_required + missing_optional,
-                "_matched_required_count": len(matched_required),
-                "_missing_required_count": len(missing_required),
-                "_catalog_index": catalog_index,
-            }
-        )
-
-    matches.sort(
-        key=lambda match: (
-            -match["match_percentage"],
-            -match["_matched_required_count"],
-            match["_missing_required_count"],
-            match["_catalog_index"],
-        )
-    )
-
-    return [
-        {
-            "role": match["role"],
-            "match_percentage": match["match_percentage"],
-            "matched_skills": match["matched_skills"],
-            "missing_skills": match["missing_skills"],
-        }
-        for match in matches[:3]
-    ]
-
-
 def _build_recommendations(category_analysis):
     ranked_categories = sorted(
         category_analysis,
@@ -547,7 +464,7 @@ def _build_recommendations(category_analysis):
     }
 
 
-def _build_next_steps(category_analysis, top_role):
+def _build_next_steps(category_analysis):
     weakest_category = min(
         category_analysis,
         key=lambda category: (
@@ -555,20 +472,14 @@ def _build_next_steps(category_analysis, top_role):
             list(CATEGORY_WEIGHTS).index(category["category"]),
         ),
     )
-    missing_skills = top_role["missing_skills"][:3]
-
-    if missing_skills:
-        skill_step = (
-            f"Build missing skills for {top_role['role']}: "
-            f"{', '.join(missing_skills)}."
-        )
-    else:
-        skill_step = f"Continue strengthening skills for {top_role['role']}."
 
     return [
         RECOMMENDATION_BY_CATEGORY[weakest_category["category"]],
         "Add 2 to 3 projects with tools, responsibilities, and measurable outcomes.",
-        skill_step,
+        (
+            "Compare your detected skills with relevant job descriptions and "
+            "add missing skills you can demonstrate."
+        ),
         "Publish relevant projects and documentation on GitHub.",
         (
             "Tailor the profile for internships or entry-level roles and review "
@@ -611,8 +522,6 @@ def analyze_profile(profile_text):
         )
     )
     status = _overall_status(overall_score)
-    role_matches = match_roles(grouped_skills)
-    top_role = role_matches[0]
 
     checks = {
         "passed": sum(
@@ -636,10 +545,19 @@ def analyze_profile(profile_text):
     weak_area_text = " and ".join(
         category["category"].lower() for category in weakest_categories
     )
+    strongest_categories = sorted(
+        category_analysis,
+        key=lambda category: (
+            -category["score"],
+            list(CATEGORY_WEIGHTS).index(category["category"]),
+        ),
+    )[:2]
+    strong_area_text = " and ".join(
+        category["category"].lower() for category in strongest_categories
+    )
     summary = (
-        f"Your profile is rated {status.lower()} with strongest skill-based "
-        f"alignment to {top_role['role']}. Focus next on {weak_area_text}. "
-        "Role suggestions are based on profile skills and are not live job matching."
+        f"Your profile is rated {status.lower()}. Its strongest areas are "
+        f"{strong_area_text}; focus next on improving {weak_area_text}."
     )
     ml_prediction = predict_role(profile_text)
 
@@ -647,12 +565,10 @@ def analyze_profile(profile_text):
         "score": overall_score,
         "status": status,
         "summary": summary,
-        "top_role": top_role["role"],
         "checks": checks,
         "category_analysis": category_analysis,
         "skills": grouped_skills,
-        "recommended_roles": role_matches,
         "recommendations": _build_recommendations(category_analysis),
-        "next_steps": _build_next_steps(category_analysis, top_role),
+        "next_steps": _build_next_steps(category_analysis),
         "ml_prediction": ml_prediction,
     }

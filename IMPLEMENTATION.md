@@ -62,8 +62,9 @@ ai-resume-profile-analyzer/
 2. The frontend sends the data to the Flask backend.
 3. Flask backend receives the input.
 4. If a resume file is uploaded, the backend extracts text from it.
-5. Analyzer checks skills, strengths, weaknesses, and missing areas.
-6. System generates ATS score, recommended career paths, and career roadmap.
+5. Rule-based analyzer checks skills, strengths, weaknesses, and missing areas.
+6. The ML classifier predicts the resume category, while the analyzer produces
+   the score, recommendations, and action plan.
 7. The frontend displays the final result to the user.
 
 ## Standalone Project and Reusable Backend
@@ -198,9 +199,9 @@ CORS support, and a JSON 404 response.
 
 A single-page Next.js frontend was created with the App Router, JavaScript, and
 Tailwind CSS. It sends `profile_text` to the backend using FormData and displays
-the ATS score, categorized skills, strengths, weaknesses, recommended roles,
-and career roadmap. Loading and error states are included, and result cards are
-not shown before a successful analysis.
+the ATS score, categorized skills, strengths, weaknesses, ML category
+prediction, and action plan. Loading and error states are included, and result
+cards are not shown before a successful analysis.
 
 Current Status:
 Phases 2-5 are completed. The current response is dummy data.
@@ -327,8 +328,9 @@ An optional local ML classifier service and training script were added. The
 training script compares TF-IDF pipelines using Multinomial Naive Bayes and
 Logistic Regression, prints evaluation results, and saves the better model
 locally. The analyzer now includes an additive `ml_prediction` result while the
-Phase 6 rule-based analyzer continues to handle scores, skills,
-recommendations, role alignment, and the career roadmap.
+Phase 6 rule-based analyzer continues to handle scores, skills, profile
+signals, recommendations, and the action plan. Resume category prediction is
+handled only by the trained ML classifier.
 
 The dataset remains local at `backend/data/resume_dataset.csv` and the entire
 `backend/data/` directory is ignored by Git. The frontend Overview tab shows a

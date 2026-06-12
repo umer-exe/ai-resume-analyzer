@@ -11,11 +11,18 @@ SAMPLE_PROFILE = "Python developer with Flask, SQL, and GitHub projects."
 
 
 class FakeClassifier:
+    classes_ = [
+        "Data_Analyst",
+        "Python_Developer",
+        "Web_Developer",
+        "Systems_Administrator",
+    ]
+
     def predict(self, _profile_texts):
         return ["Python_Developer"]
 
     def predict_proba(self, _profile_texts):
-        return [[0.14, 0.86]]
+        return [[0.08, 0.71, 0.16, 0.05]]
 
 
 class MlClassifierTests(unittest.TestCase):
@@ -31,6 +38,7 @@ class MlClassifierTests(unittest.TestCase):
                 "confidence": 0,
                 "source": "ml_classifier",
                 "message": "ML model not trained yet",
+                "top_predictions": [],
             },
         )
 
@@ -43,6 +51,7 @@ class MlClassifierTests(unittest.TestCase):
                 "confidence": 0,
                 "source": "ml_classifier",
                 "message": "Profile text is required",
+                "top_predictions": [],
             },
         )
 
@@ -61,10 +70,11 @@ class MlClassifierTests(unittest.TestCase):
                 "confidence": 0,
                 "source": "ml_classifier",
                 "message": "ML prediction is unavailable",
+                "top_predictions": [],
             },
         )
 
-    def test_prediction_includes_display_category_and_bounded_confidence(self):
+    def test_prediction_includes_display_category_and_top_predictions(self):
         with patch(
             "services.ml_classifier._load_model",
             return_value=FakeClassifier(),
@@ -76,9 +86,26 @@ class MlClassifierTests(unittest.TestCase):
             {
                 "predicted_category": "Python_Developer",
                 "display_category": "Python Developer",
-                "confidence": 86,
+                "confidence": 71,
                 "source": "ml_classifier",
                 "message": None,
+                "top_predictions": [
+                    {
+                        "predicted_category": "Python_Developer",
+                        "display_category": "Python Developer",
+                        "confidence": 71,
+                    },
+                    {
+                        "predicted_category": "Web_Developer",
+                        "display_category": "Web Developer",
+                        "confidence": 16,
+                    },
+                    {
+                        "predicted_category": "Data_Analyst",
+                        "display_category": "Data Analyst",
+                        "confidence": 8,
+                    },
+                ],
             },
         )
 
@@ -89,6 +116,7 @@ class MlClassifierTests(unittest.TestCase):
             "confidence": 72,
             "source": "ml_classifier",
             "message": None,
+            "top_predictions": [],
         }
 
         with patch(
@@ -101,11 +129,9 @@ class MlClassifierTests(unittest.TestCase):
             "score",
             "status",
             "summary",
-            "top_role",
             "checks",
             "category_analysis",
             "skills",
-            "recommended_roles",
             "recommendations",
             "next_steps",
         }
@@ -141,6 +167,7 @@ class Phase65ApiTests(unittest.TestCase):
                 "confidence": 0,
                 "source": "ml_classifier",
                 "message": "ML model not trained yet",
+                "top_predictions": [],
             },
         ):
             response = self.client.post(
@@ -153,6 +180,7 @@ class Phase65ApiTests(unittest.TestCase):
         ml_prediction = response.get_json()["data"]["ml_prediction"]
         self.assertEqual(ml_prediction["source"], "ml_classifier")
         self.assertIn("display_category", ml_prediction)
+        self.assertIn("top_predictions", ml_prediction)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ def _prediction_response(
     predicted_category=None,
     display_category=None,
     confidence=0,
+    top_predictions=None,
     message=None,
 ):
     return {
@@ -22,6 +23,7 @@ def _prediction_response(
         "confidence": confidence,
         "source": "ml_classifier",
         "message": message,
+        "top_predictions": top_predictions or [],
     }
 
 
@@ -35,6 +37,26 @@ def _confidence_percentage(probabilities):
 
     confidence = round(float(max(probabilities)) * 100)
     return max(0, min(100, int(confidence)))
+
+
+def _top_predictions(model, probabilities):
+    classes = getattr(model, "classes_", None)
+    if classes is None or len(classes) != len(probabilities):
+        return []
+
+    ranked_indices = sorted(
+        range(len(probabilities)),
+        key=lambda index: (-float(probabilities[index]), index),
+    )[:3]
+
+    return [
+        {
+            "predicted_category": str(classes[index]),
+            "display_category": _display_category(classes[index]),
+            "confidence": _confidence_percentage([probabilities[index]]),
+        }
+        for index in ranked_indices
+    ]
 
 
 def _load_model():
@@ -71,16 +93,22 @@ def predict_role(profile_text):
             return _prediction_response(message="ML prediction is unavailable")
 
         confidence = 0
+        top_predictions = []
 
         if hasattr(model, "predict_proba"):
-            confidence = _confidence_percentage(
-                model.predict_proba([normalized_text])[0]
-            )
+            try:
+                probabilities = model.predict_proba([normalized_text])[0]
+                confidence = _confidence_percentage(probabilities)
+                top_predictions = _top_predictions(model, probabilities)
+            except Exception:
+                confidence = 0
+                top_predictions = []
 
         return _prediction_response(
             predicted_category=predicted_category,
             display_category=_display_category(predicted_category),
             confidence=confidence,
+            top_predictions=top_predictions,
         )
     except Exception:
         return _prediction_response(message="ML prediction is unavailable")

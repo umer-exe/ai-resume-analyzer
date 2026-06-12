@@ -3,10 +3,8 @@ from unittest.mock import patch
 
 from app import app
 from services.analyzer import (
-    SKILL_CATALOG,
     analyze_profile,
     extract_skills,
-    match_roles,
 )
 
 
@@ -30,11 +28,9 @@ class AnalyzerTests(unittest.TestCase):
                 "score",
                 "status",
                 "summary",
-                "top_role",
                 "checks",
                 "category_analysis",
                 "skills",
-                "recommended_roles",
                 "recommendations",
                 "next_steps",
                 "ml_prediction",
@@ -48,7 +44,6 @@ class AnalyzerTests(unittest.TestCase):
             sum(first_result["checks"].values()),
             len(first_result["category_analysis"]),
         )
-        self.assertEqual(len(first_result["recommended_roles"]), 3)
         self.assertEqual(len(first_result["next_steps"]), 5)
         self.assertEqual(
             set(first_result["ml_prediction"]),
@@ -58,6 +53,7 @@ class AnalyzerTests(unittest.TestCase):
                 "confidence",
                 "source",
                 "message",
+                "top_predictions",
             },
         )
 
@@ -65,11 +61,6 @@ class AnalyzerTests(unittest.TestCase):
             self.assertIsInstance(category["score"], int)
             self.assertGreaterEqual(category["score"], 0)
             self.assertLessEqual(category["score"], 100)
-
-        for role in first_result["recommended_roles"]:
-            self.assertIsInstance(role["match_percentage"], int)
-            self.assertGreaterEqual(role["match_percentage"], 0)
-            self.assertLessEqual(role["match_percentage"], 100)
 
     def test_phrase_matching_aliases_and_false_positive_prevention(self):
         skills = extract_skills(
@@ -98,31 +89,14 @@ class AnalyzerTests(unittest.TestCase):
 
         self.assertGreater(rich_result["score"], sparse_result["score"])
 
-    def test_role_ties_use_fixed_catalog_order(self):
-        empty_skills = {category: [] for category in SKILL_CATALOG}
-        roles = match_roles(empty_skills)
+    def test_action_plan_is_quality_focused_without_role_prediction(self):
+        result = analyze_profile(SAMPLE_PROFILE)
 
-        self.assertEqual(
-            [role["role"] for role in roles],
-            [
-                "Python Developer Intern",
-                "Junior Web Developer",
-                "Data Analyst Intern",
-            ],
-        )
-
-    def test_role_fields_include_optional_matches_and_required_gaps_first(self):
-        grouped_skills = {category: [] for category in SKILL_CATALOG}
-        grouped_skills["Programming"] = ["Python"]
-        grouped_skills["Cloud and Tools"] = ["GitHub"]
-
-        python_role = match_roles(grouped_skills)[0]
-
-        self.assertEqual(python_role["role"], "Python Developer Intern")
-        self.assertEqual(python_role["matched_skills"], ["Python", "GitHub"])
-        self.assertEqual(
-            python_role["missing_skills"][:2],
-            ["Flask", "SQL"],
+        self.assertEqual(len(result["next_steps"]), 5)
+        self.assertNotIn("top_role", result)
+        self.assertNotIn("recommended_roles", result)
+        self.assertTrue(
+            any("job descriptions" in step for step in result["next_steps"])
         )
 
 

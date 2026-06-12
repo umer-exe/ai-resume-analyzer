@@ -69,13 +69,33 @@ def load_dataset(dataset_path=DATASET_PATH):
     return cleaned[text_column], cleaned[category_column]
 
 
-def train_and_select_model(resume_texts, categories):
+def _build_pipeline(classifier):
     from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.pipeline import Pipeline
+
+    return Pipeline(
+        [
+            (
+                "tfidf",
+                TfidfVectorizer(
+                    stop_words="english",
+                    ngram_range=(1, 2),
+                    min_df=2,
+                    max_df=0.95,
+                    max_features=30000,
+                    sublinear_tf=True,
+                ),
+            ),
+            ("classifier", classifier),
+        ]
+    )
+
+
+def train_and_select_model(resume_texts, categories):
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score, classification_report
     from sklearn.model_selection import train_test_split
     from sklearn.naive_bayes import MultinomialNB
-    from sklearn.pipeline import Pipeline
 
     category_counts = categories.value_counts()
     stratify = categories if category_counts.min() >= 2 else None
@@ -87,27 +107,9 @@ def train_and_select_model(resume_texts, categories):
         stratify=stratify,
     )
 
-    def build_pipeline(classifier):
-        return Pipeline(
-            [
-                (
-                    "tfidf",
-                    TfidfVectorizer(
-                        stop_words="english",
-                        ngram_range=(1, 2),
-                        min_df=2,
-                        max_df=0.95,
-                        max_features=30000,
-                        sublinear_tf=True,
-                    ),
-                ),
-                ("classifier", classifier),
-            ]
-        )
-
     models = {
-        "Multinomial Naive Bayes": build_pipeline(MultinomialNB()),
-        "Logistic Regression": build_pipeline(
+        "Multinomial Naive Bayes": _build_pipeline(MultinomialNB()),
+        "Logistic Regression": _build_pipeline(
             LogisticRegression(
                 max_iter=1000,
                 random_state=RANDOM_STATE,

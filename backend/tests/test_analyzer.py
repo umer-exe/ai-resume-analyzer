@@ -15,8 +15,25 @@ SAMPLE_PROFILE = (
     "AI, and data analysis roles."
 )
 
+FIXED_ML_PREDICTION = {
+    "predicted_category": None,
+    "display_category": None,
+    "confidence": 0,
+    "source": "ml_classifier",
+    "message": "ML model not trained yet",
+    "top_predictions": [],
+}
+
 
 class AnalyzerTests(unittest.TestCase):
+    def setUp(self):
+        prediction_patcher = patch(
+            "services.analyzer.predict_category",
+            return_value=FIXED_ML_PREDICTION,
+        )
+        prediction_patcher.start()
+        self.addCleanup(prediction_patcher.stop)
+
     def test_response_schema_scores_and_repeatability(self):
         first_result = analyze_profile(SAMPLE_PROFILE)
         second_result = analyze_profile(SAMPLE_PROFILE)
@@ -168,6 +185,12 @@ class ApiTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
         self.client = app.test_client()
+        prediction_patcher = patch(
+            "services.analyzer.predict_category",
+            return_value=FIXED_ML_PREDICTION,
+        )
+        prediction_patcher.start()
+        self.addCleanup(prediction_patcher.stop)
 
     def test_http_statuses_and_response_shapes(self):
         root_response = self.client.get("/")

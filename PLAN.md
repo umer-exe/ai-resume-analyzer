@@ -1,74 +1,108 @@
-# Project Plan — AI Powered Resume and Profile Analyzer
+# Project Plan - AI Powered Resume and Profile Analyzer
 
-## Phase 1, Basic Structure
+## Completed Phases
 
-Goal: Create folders, placeholder files, README, PLAN.md, IMPLEMENTATION.md, and .gitignore.
+### Phase 1: Basic Structure
 
-## Phase 2, Flask Backend Starter
+Created the backend, frontend, service, test, documentation, and Git-ignore
+structure.
 
-Goal: Set up Flask, virtual environment, basic GET / route, and test backend.
+### Phase 2: Flask Backend Starter
 
-## Phase 3, Dummy Analyze API
+Added the Flask application, CORS support, JSON responses, and API status route.
 
-Goal: Create POST /api/v1/analyze that accepts profile_text and returns dummy JSON.
+### Phase 3: Dummy Analyze API
 
-The API response format should stay clean and consistent because the backend may later be reused by another frontend or system.
+Added `POST /api/v1/analyze` with form-data validation and a stable JSON
+response shape.
 
-## Phase 4, Next.js Frontend Starter
+### Phase 4: Next.js Frontend Starter
 
-Goal: Create a simple Next.js frontend for this AI course project.
+Created the standalone Next.js App Router frontend with Tailwind CSS.
 
-This frontend is for the standalone course project demo.
+### Phase 5: Frontend and Backend Connection
 
-## Phase 5, Connect Frontend to Backend
+Connected profile text submission to the Flask API with loading, error, and
+result states.
 
-Goal: Send profile_text from the Next.js frontend to the Flask backend and display the dummy response.
+### Phase 5.5: Result Flow and UI Refinement
 
-## Phase 5.5, Refine Result Flow and UI
+Added the two-column workspace, report preview, loading checklist, sample
+profile helper, and tabbed result flow.
 
-Goal: Improve the frontend result experience using dummy data by adding a tabbed report layout with Overview, Analysis, Recommendations, and Next Steps.
+### Phase 6: Deterministic Rule-Based Analyzer
 
-## Phase 6, Rule Based Analyzer
+Replaced dummy analysis with explainable skill detection and six
+profile-quality categories:
 
-Goal: Add basic skill detection, ATS score, strengths, weaknesses,
-category feedback, and an action plan.
+* Skills
+* Projects
+* Experience
+* Education
+* ATS Keywords
+* Formatting
 
-The main analyzer logic should stay inside backend/services so it remains reusable.
+The analyzer returns a weighted score, status, summary, checks, category
+feedback, detected skills, and a prioritized action plan.
 
-Status: Completed with deterministic, explainable profile-quality analysis.
+### Phase 6.5: ML Category Classifier
 
-## Phase 6.5, ML Role Classifier
+Added a local TF-IDF classifier that compares Multinomial Naive Bayes and
+Logistic Regression during training and saves the better model. ML remains the
+only source of resume category prediction.
 
-Goal: Train and integrate a simple TF-IDF classifier to predict a
-resume/profile category while keeping the Phase 6 rule-based analyzer.
+### Phase 6.6: Architecture and UI/UX Refinement
 
-## Phase 6.6, Architecture and UI/UX Refinement
+Separated analyzer rules from analysis flow, kept ML prediction independent,
+simplified the API output, refined the three-tab UI, added sample categories,
+and improved the presentation of the existing workflow.
 
-Goal: Keep rule-based profile-quality analysis separate from ML category
-prediction, return a flat detected-skills list, generate one action for each
-quality category, and show one compact prioritized action plan in the existing
-three-tab interface.
+### Phase 6.7: Project Structure and Maintainability Refactor
 
-## Phase 7, Resume Upload
+Refactored the completed Phase 6.6 code without changing application behavior:
 
-Goal: Add PDF, DOCX, and TXT upload support using PyMuPDF and python-docx.
+* Moved analyzer constants, thresholds, terms, and patterns into
+  `analyzer_rules.py`.
+* Kept `analyzer.py` focused on extraction, scoring, summaries, and action plans.
+* Renamed tests by responsibility and isolated analyzer tests from the ML model.
+* Renamed the ML entry point to `predict_category()` while retaining a
+  compatibility alias.
+* Split the frontend into `page.js`, `analyzer-data.js`, and
+  `report-components.js`.
+* Added environment-based API and debug configuration.
+* Pinned backend dependencies and removed unused Next.js starter files.
 
-The backend should extract resume text and pass it to the analyzer service.
+The reusable API structure is already established:
 
-## Phase 8, Optional AI Upgrade
+* Flask routes stay thin and return JSON.
+* Analyzer and ML logic live in backend services.
+* The API response shape is stable.
+* The frontend API endpoint is configurable.
+* The backend can be reused by another frontend without project-specific code.
 
-Goal: Add Gemini or OpenAI API later for smarter resume feedback if time allows.
+## Next Phase
 
-## Phase 9, Reusable API Structure
+### Phase 7: Resume Upload and Text Extraction
 
-Goal: Keep this project as a separate AI course project, but build the backend in a reusable way.
+Add PDF, DOCX, and TXT upload support.
 
-The Flask backend should be API-first so it can later be connected to another frontend, dashboard, or external system if needed.
+Planned scope:
 
-Important rules:
+* Add file selection to the existing input flow.
+* Validate supported file types and file size.
+* Extract text using PyMuPDF, python-docx, or plain-text reading.
+* Pass extracted text into the existing analyzer service.
+* Preserve direct profile-text analysis.
+* Add focused parser and upload API tests.
 
-* Backend should return JSON only.
-* Analyzer logic should stay inside backend/services.
-* Flask routes should stay simple.
-* API response format should remain consistent.
-* Do not add project-specific external integration code for now.
+Phase 7 should not change the analyzer/ML responsibility boundary.
+
+## Final Optional Phase
+
+### Phase 8: Optional AI Upgrade
+
+Optionally add Gemini or OpenAI for richer natural-language feedback after the
+deterministic analyzer and resume upload flow are complete.
+
+This phase is optional. It must not replace deterministic scoring or the local
+ML category classifier.

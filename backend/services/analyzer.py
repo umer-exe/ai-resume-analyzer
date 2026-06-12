@@ -3,152 +3,8 @@
 import re
 from functools import lru_cache
 
-from services.ml_classifier import predict_role
-
-
-SKILL_CATALOG = (
-    ("Python", ("python",)),
-    ("JavaScript", ("javascript", "java script", "js")),
-    ("Java", ("java",)),
-    ("C++", ("c++", "cpp")),
-    ("C#", ("c#", "c sharp")),
-    ("SQL", ("sql", "mysql", "postgresql", "postgres", "sqlite")),
-    ("HTML", ("html", "html5")),
-    ("CSS", ("css", "css3")),
-    ("Flask", ("flask",)),
-    ("Django", ("django",)),
-    ("React", ("react", "react.js", "reactjs")),
-    ("Node.js", ("node.js", "nodejs", "node js")),
-    ("REST APIs", ("rest api", "rest apis", "restful api", "api", "apis")),
-    (
-        "Artificial Intelligence",
-        ("artificial intelligence", "basic ai concepts", "ai concepts", "ai"),
-    ),
-    ("Machine Learning", ("machine learning", "machine-learning", "ml")),
-    ("Pandas", ("pandas",)),
-    ("NumPy", ("numpy",)),
-    (
-        "Data Visualization",
-        ("data visualization", "data visualisation", "visualization"),
-    ),
-    ("Excel", ("excel", "microsoft excel")),
-    ("Power BI", ("power bi", "powerbi")),
-    ("Cybersecurity", ("cybersecurity", "cyber security")),
-    ("Networking", ("networking", "computer networks", "network security")),
-    ("Linux", ("linux",)),
-    ("Wireshark", ("wireshark",)),
-    ("GitHub", ("github",)),
-    ("Git", ("git",)),
-    ("Docker", ("docker",)),
-    ("AWS", ("aws", "amazon web services")),
-    ("Azure", ("azure", "microsoft azure")),
-    ("Google Cloud", ("google cloud", "gcp")),
-)
-
-CATEGORY_WEIGHTS = {
-    "Skills": 0.25,
-    "Projects": 0.20,
-    "Experience": 0.15,
-    "Education": 0.15,
-    "ATS Keywords": 0.15,
-    "Formatting": 0.10,
-}
-
-ACTION_VERBS = (
-    "achieved",
-    "analyzed",
-    "automated",
-    "built",
-    "created",
-    "designed",
-    "developed",
-    "implemented",
-    "improved",
-    "led",
-    "managed",
-    "optimized",
-    "reduced",
-    "tested",
-)
-
-PROJECT_TERMS = (
-    "academic project",
-    "capstone",
-    "project",
-    "projects",
-    "portfolio",
-)
-
-EXPERIENCE_TERMS = (
-    "employment",
-    "experience",
-    "freelance",
-    "intern",
-    "internship",
-    "volunteer",
-    "worked",
-)
-
-EDUCATION_TERMS = (
-    "college",
-    "education",
-    "school",
-    "student",
-    "university",
-)
-
-DEGREE_TERMS = (
-    "associate",
-    "bachelor",
-    "bs",
-    "bsc",
-    "degree",
-    "master",
-    "msc",
-)
-
-FIELD_TERMS = (
-    "artificial intelligence",
-    "computer science",
-    "data science",
-    "information technology",
-    "software engineering",
-)
-
-MEASURABLE_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9])\d+(?:\.\d+)?\s*"
-    r"(?:%|percent|users?|clients?|projects?|hours?|days?|weeks?|months?|"
-    r"years?|records?|requests?|seconds?|ms|x)(?![A-Za-z0-9])",
-    re.IGNORECASE,
-)
-
-DURATION_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9])(?:\d+\+?\s*(?:months?|years?)|"
-    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})"
-    r"(?![A-Za-z0-9])",
-    re.IGNORECASE,
-)
-
-YEAR_PATTERN = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
-HEADING_PATTERN = re.compile(
-    r"(?im)^\s*(?:education|experience|projects?|skills|summary)\s*:?\s*$"
-)
-BULLET_PATTERN = re.compile(r"(?m)^\s*(?:[-*]|\d+[.)])\s+")
-
-ACTION_BY_CATEGORY = {
-    "Skills": "Add a concise skills section with the technical tools you can demonstrate.",
-    "Projects": "Describe projects with the tools used, your contribution, and a measurable result.",
-    "Experience": (
-        "Add an internship, freelance, volunteer, or academic responsibility with clear outcomes."
-    ),
-    "Education": "State your qualification, field of study, institution, and dates clearly.",
-    "ATS Keywords": (
-        "Use clear technical skills, action verbs, and measurable achievements throughout the profile."
-    ),
-    "Formatting": (
-        "Organize the profile with clear headings, concise bullet points, and consistent spacing."
-    ),
-}
+from services import analyzer_rules as rules
+from services.ml_classifier import predict_category
 
 
 @lru_cache(maxsize=None)
@@ -177,26 +33,33 @@ def _round_score(value):
 
 
 def _category_status(score):
-    if score >= 75:
+    if score >= rules.CATEGORY_GOOD_SCORE:
         return "Good"
-    if score >= 50:
+    if score >= rules.CATEGORY_WARNING_SCORE:
         return "Warning"
     return "Needs Work"
 
 
 def _overall_status(score):
-    if score >= 80:
+    if score >= rules.OVERALL_STRONG_SCORE:
         return "Strong"
-    if score >= 60:
+    if score >= rules.OVERALL_MODERATE_SCORE:
         return "Moderate"
     return "Needs Work"
+
+
+def _category_sort_key(category):
+    return (
+        category["score"],
+        rules.CATEGORY_ORDER.index(category["category"]),
+    )
 
 
 def extract_skills(profile_text):
     """Return unique canonical skills in deterministic catalog order."""
     return [
         skill
-        for skill, aliases in SKILL_CATALOG
+        for skill, aliases in rules.SKILL_CATALOG
         if any(_contains_phrase(profile_text, alias) for alias in aliases)
     ]
 
@@ -224,15 +87,15 @@ def _skills_analysis(detected_skills):
         action = "Group the detected skills in one concise technical skills section."
     else:
         feedback = "Few clearly named technical skills were detected."
-        action = ACTION_BY_CATEGORY["Skills"]
+        action = rules.ACTION_BY_CATEGORY["Skills"]
 
     return score, feedback, action
 
 
 def _projects_analysis(profile_text, detected_skill_count):
-    has_project = _contains_any(profile_text, PROJECT_TERMS)
-    has_action = _contains_any(profile_text, ACTION_VERBS)
-    has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
+    has_project = _contains_any(profile_text, rules.PROJECT_TERMS)
+    has_action = _contains_any(profile_text, rules.ACTION_VERBS)
+    has_measurement = bool(rules.MEASURABLE_PATTERN.search(profile_text))
     has_detail = detected_skill_count > 0 and has_project
 
     score = (
@@ -248,7 +111,7 @@ def _projects_analysis(profile_text, detected_skill_count):
 
     if not has_project:
         feedback = "No clear project evidence was detected."
-        action = ACTION_BY_CATEGORY["Projects"]
+        action = rules.ACTION_BY_CATEGORY["Projects"]
     elif not has_detail:
         feedback = "Projects are mentioned, but the tools and contribution are unclear."
         action = "Name the tools used and explain your contribution to each project."
@@ -263,10 +126,10 @@ def _projects_analysis(profile_text, detected_skill_count):
 
 
 def _experience_analysis(profile_text):
-    has_experience = _contains_any(profile_text, EXPERIENCE_TERMS)
-    has_duration = bool(DURATION_PATTERN.search(profile_text))
-    has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
-    has_action = _contains_any(profile_text, ACTION_VERBS)
+    has_experience = _contains_any(profile_text, rules.EXPERIENCE_TERMS)
+    has_duration = bool(rules.DURATION_PATTERN.search(profile_text))
+    has_measurement = bool(rules.MEASURABLE_PATTERN.search(profile_text))
+    has_action = _contains_any(profile_text, rules.ACTION_VERBS)
 
     score = _round_score(
         (40 if has_experience else 0)
@@ -277,7 +140,7 @@ def _experience_analysis(profile_text):
 
     if not has_experience:
         feedback = "No clear practical experience was detected."
-        action = ACTION_BY_CATEGORY["Experience"]
+        action = rules.ACTION_BY_CATEGORY["Experience"]
     elif not has_action:
         feedback = "Experience is present, but responsibilities are not described clearly."
         action = "Rewrite experience points with direct action verbs and clear responsibilities."
@@ -292,10 +155,10 @@ def _experience_analysis(profile_text):
 
 
 def _education_analysis(profile_text):
-    has_education = _contains_any(profile_text, EDUCATION_TERMS)
-    has_field = _contains_any(profile_text, FIELD_TERMS)
-    has_degree = _contains_any(profile_text, DEGREE_TERMS)
-    has_year = bool(YEAR_PATTERN.search(profile_text))
+    has_education = _contains_any(profile_text, rules.EDUCATION_TERMS)
+    has_field = _contains_any(profile_text, rules.FIELD_TERMS)
+    has_degree = _contains_any(profile_text, rules.DEGREE_TERMS)
+    has_year = bool(rules.YEAR_PATTERN.search(profile_text))
 
     score = _round_score(
         (40 if has_education else 0)
@@ -306,7 +169,7 @@ def _education_analysis(profile_text):
 
     if not has_education:
         feedback = "Education details were not clearly detected."
-        action = ACTION_BY_CATEGORY["Education"]
+        action = rules.ACTION_BY_CATEGORY["Education"]
     elif not has_degree:
         feedback = "Education is present; add the qualification and study dates."
         action = "Add the qualification name and expected or completed study dates."
@@ -318,8 +181,8 @@ def _education_analysis(profile_text):
 
 
 def _ats_keywords_analysis(profile_text, detected_skill_count):
-    action_count = _count_phrases(profile_text, ACTION_VERBS)
-    has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
+    action_count = _count_phrases(profile_text, rules.ACTION_VERBS)
+    has_measurement = bool(rules.MEASURABLE_PATTERN.search(profile_text))
 
     score = _round_score(
         (40 if detected_skill_count >= 3 else 20 if detected_skill_count else 0)
@@ -338,7 +201,7 @@ def _ats_keywords_analysis(profile_text, detected_skill_count):
         action = "Add numbers, percentages, scale, or time saved to key achievements."
     else:
         feedback = "Name more technical skills clearly in the profile."
-        action = ACTION_BY_CATEGORY["ATS Keywords"]
+        action = rules.ACTION_BY_CATEGORY["ATS Keywords"]
 
     return score, feedback, action
 
@@ -349,8 +212,8 @@ def _formatting_analysis(profile_text):
     sentence_count = len(
         [sentence for sentence in re.split(r"[.!?]+", profile_text) if sentence.strip()]
     )
-    has_headings = bool(HEADING_PATTERN.search(profile_text))
-    has_bullets = bool(BULLET_PATTERN.search(profile_text))
+    has_headings = bool(rules.HEADING_PATTERN.search(profile_text))
+    has_bullets = bool(rules.BULLET_PATTERN.search(profile_text))
     is_readable_case = profile_text != profile_text.upper()
     average_sentence_length = word_count / max(sentence_count, 1)
 
@@ -369,7 +232,7 @@ def _formatting_analysis(profile_text):
         action = "Keep headings, bullets, spacing, and sentence style consistent."
     elif not has_headings and not has_bullets:
         feedback = "Add clear section headings and concise bullet points."
-        action = ACTION_BY_CATEGORY["Formatting"]
+        action = rules.ACTION_BY_CATEGORY["Formatting"]
     else:
         feedback = "Improve spacing, sentence length, and section consistency."
         action = "Shorten dense sentences and make section formatting consistent."
@@ -378,14 +241,7 @@ def _formatting_analysis(profile_text):
 
 
 def _build_action_plan(category_analysis):
-    ranked_categories = sorted(
-        category_analysis,
-        key=lambda category: (
-            category["score"],
-            list(CATEGORY_WEIGHTS).index(category["category"]),
-        ),
-    )
-
+    ranked_categories = sorted(category_analysis, key=_category_sort_key)
     categories_to_improve = [
         category
         for category in ranked_categories
@@ -407,6 +263,45 @@ def _build_action_plan(category_analysis):
         }
         for category in selected_categories
     ]
+
+
+def _build_checks(category_analysis):
+    return {
+        "passed": sum(
+            category["status"] == "Good" for category in category_analysis
+        ),
+        "warnings": sum(
+            category["status"] == "Warning" for category in category_analysis
+        ),
+        "issues": sum(
+            category["status"] == "Needs Work" for category in category_analysis
+        ),
+    }
+
+
+def _build_summary(category_analysis, status):
+    weakest_categories = sorted(
+        category_analysis,
+        key=_category_sort_key,
+    )[:2]
+    strongest_categories = sorted(
+        category_analysis,
+        key=lambda category: (
+            -category["score"],
+            rules.CATEGORY_ORDER.index(category["category"]),
+        ),
+    )[:2]
+
+    weak_area_text = " and ".join(
+        category["category"].lower() for category in weakest_categories
+    )
+    strong_area_text = " and ".join(
+        category["category"].lower() for category in strongest_categories
+    )
+    return (
+        f"Your profile is rated {status.lower()}. Its strongest areas are "
+        f"{strong_area_text}; focus next on improving {weak_area_text}."
+    )
 
 
 def analyze_profile(profile_text):
@@ -439,57 +334,19 @@ def analyze_profile(profile_text):
 
     overall_score = _round_score(
         sum(
-            category["score"] * CATEGORY_WEIGHTS[category["category"]]
+            category["score"] * rules.CATEGORY_WEIGHTS[category["category"]]
             for category in category_analysis
         )
     )
     status = _overall_status(overall_score)
 
-    checks = {
-        "passed": sum(
-            category["status"] == "Good" for category in category_analysis
-        ),
-        "warnings": sum(
-            category["status"] == "Warning" for category in category_analysis
-        ),
-        "issues": sum(
-            category["status"] == "Needs Work" for category in category_analysis
-        ),
-    }
-
-    weakest_categories = sorted(
-        category_analysis,
-        key=lambda category: (
-            category["score"],
-            list(CATEGORY_WEIGHTS).index(category["category"]),
-        ),
-    )[:2]
-    weak_area_text = " and ".join(
-        category["category"].lower() for category in weakest_categories
-    )
-    strongest_categories = sorted(
-        category_analysis,
-        key=lambda category: (
-            -category["score"],
-            list(CATEGORY_WEIGHTS).index(category["category"]),
-        ),
-    )[:2]
-    strong_area_text = " and ".join(
-        category["category"].lower() for category in strongest_categories
-    )
-    summary = (
-        f"Your profile is rated {status.lower()}. Its strongest areas are "
-        f"{strong_area_text}; focus next on improving {weak_area_text}."
-    )
-    ml_prediction = predict_role(profile_text)
-
     return {
         "score": overall_score,
         "status": status,
-        "summary": summary,
-        "checks": checks,
+        "summary": _build_summary(category_analysis, status),
+        "checks": _build_checks(category_analysis),
         "category_analysis": category_analysis,
         "skills": detected_skills,
         "action_plan": _build_action_plan(category_analysis),
-        "ml_prediction": ml_prediction,
+        "ml_prediction": predict_category(profile_text),
     }

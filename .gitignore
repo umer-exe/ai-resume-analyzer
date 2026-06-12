@@ -13,8 +13,6 @@ frontend/.next/
 frontend/out/
 frontend/.env.local
 
-
-
 # OS/editor files
 .DS_Store
 .vscode/

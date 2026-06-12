@@ -1,10 +1,12 @@
 """Optional local ML category prediction for Phase 6.5."""
 
+import logging
 from pathlib import Path
 
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = (BACKEND_DIR / "models" / "resume_role_classifier.pkl").resolve()
+logger = logging.getLogger(__name__)
 
 _loaded_model = None
 _loaded_model_mtime = None
@@ -77,7 +79,7 @@ def _load_model():
     return _loaded_model
 
 
-def predict_role(profile_text):
+def predict_category(profile_text):
     """Predict a resume category without making model availability mandatory."""
     if not isinstance(profile_text, str) or not profile_text.strip():
         return _prediction_response(message="Profile text is required")
@@ -101,6 +103,7 @@ def predict_role(profile_text):
                 confidence = _confidence_percentage(probabilities)
                 top_predictions = _top_predictions(model, probabilities)
             except Exception:
+                logger.exception("Unable to calculate ML prediction probabilities")
                 confidence = 0
                 top_predictions = []
 
@@ -111,4 +114,9 @@ def predict_role(profile_text):
             top_predictions=top_predictions,
         )
     except Exception:
+        logger.exception("Unable to generate ML category prediction")
         return _prediction_response(message="ML prediction is unavailable")
+
+
+# Temporary compatibility alias for callers using the earlier Phase 6.5 name.
+predict_role = predict_category

@@ -4,10 +4,21 @@ from unittest.mock import patch
 from app import app
 from ml.train_model import detect_dataset_columns
 from services.analyzer import analyze_profile
-from services.ml_classifier import predict_role
+from services.ml_classifier import predict_category
 
 
 SAMPLE_PROFILE = "Python developer with Flask, SQL, and GitHub projects."
+
+
+def fallback_prediction(message):
+    return {
+        "predicted_category": None,
+        "display_category": None,
+        "confidence": 0,
+        "source": "ml_classifier",
+        "message": message,
+        "top_predictions": [],
+    }
 
 
 class FakeClassifier:
@@ -28,50 +39,30 @@ class FakeClassifier:
 class MlClassifierTests(unittest.TestCase):
     def test_missing_model_returns_safe_fallback(self):
         with patch("services.ml_classifier._load_model", return_value=None):
-            prediction = predict_role(SAMPLE_PROFILE)
+            prediction = predict_category(SAMPLE_PROFILE)
 
         self.assertEqual(
             prediction,
-            {
-                "predicted_category": None,
-                "display_category": None,
-                "confidence": 0,
-                "source": "ml_classifier",
-                "message": "ML model not trained yet",
-                "top_predictions": [],
-            },
+            fallback_prediction("ML model not trained yet"),
         )
 
     def test_empty_input_returns_safe_fallback(self):
         self.assertEqual(
-            predict_role("   "),
-            {
-                "predicted_category": None,
-                "display_category": None,
-                "confidence": 0,
-                "source": "ml_classifier",
-                "message": "Profile text is required",
-                "top_predictions": [],
-            },
+            predict_category("   "),
+            fallback_prediction("Profile text is required"),
         )
 
     def test_prediction_failure_returns_safe_fallback(self):
-        with patch(
-            "services.ml_classifier._load_model",
-            side_effect=RuntimeError("model load failed"),
-        ):
-            prediction = predict_role(SAMPLE_PROFILE)
+        with self.assertLogs("services.ml_classifier", level="ERROR"):
+            with patch(
+                "services.ml_classifier._load_model",
+                side_effect=RuntimeError("model load failed"),
+            ):
+                prediction = predict_category(SAMPLE_PROFILE)
 
         self.assertEqual(
             prediction,
-            {
-                "predicted_category": None,
-                "display_category": None,
-                "confidence": 0,
-                "source": "ml_classifier",
-                "message": "ML prediction is unavailable",
-                "top_predictions": [],
-            },
+            fallback_prediction("ML prediction is unavailable"),
         )
 
     def test_prediction_includes_display_category_and_top_predictions(self):
@@ -79,7 +70,7 @@ class MlClassifierTests(unittest.TestCase):
             "services.ml_classifier._load_model",
             return_value=FakeClassifier(),
         ):
-            prediction = predict_role(SAMPLE_PROFILE)
+            prediction = predict_category(SAMPLE_PROFILE)
 
         self.assertEqual(
             prediction,
@@ -120,7 +111,7 @@ class MlClassifierTests(unittest.TestCase):
         }
 
         with patch(
-            "services.analyzer.predict_role",
+            "services.analyzer.predict_category",
             return_value=expected_prediction,
         ):
             result = analyze_profile(SAMPLE_PROFILE)
@@ -153,22 +144,15 @@ class MlClassifierTests(unittest.TestCase):
         )
 
 
-class Phase65ApiTests(unittest.TestCase):
+class MlApiTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
         self.client = app.test_client()
 
     def test_valid_profile_still_returns_200_with_ml_prediction(self):
         with patch(
-            "services.analyzer.predict_role",
-            return_value={
-                "predicted_category": None,
-                "display_category": None,
-                "confidence": 0,
-                "source": "ml_classifier",
-                "message": "ML model not trained yet",
-                "top_predictions": [],
-            },
+            "services.analyzer.predict_category",
+            return_value=fallback_prediction("ML model not trained yet"),
         ):
             response = self.client.post(
                 "/api/v1/analyze",

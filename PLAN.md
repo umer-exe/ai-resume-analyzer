@@ -24,6 +24,10 @@ This frontend is for the standalone course project demo.
 
 Goal: Send profile_text from the Next.js frontend to the Flask backend and display the dummy response.
 
+## Phase 5.5, Refine Result Flow and UI
+
+Goal: Improve the frontend result experience using dummy data by adding a tabbed report layout with Overview, Analysis, Recommendations, and Next Steps.
+
 ## Phase 6, Rule Based Analyzer
 
 Goal: Add basic skill detection, ATS score, strengths, weaknesses, role recommendations, and career roadmap.

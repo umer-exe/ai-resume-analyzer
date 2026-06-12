@@ -1,7 +1,19 @@
+# Backend
 backend/.venv/
 backend/uploads/*
 __pycache__/
 *.pyc
 .env
+backend/.env
+
+# Frontend
 frontend/node_modules/
 frontend/.next/
+frontend/out/
+frontend/.env.local
+
+
+
+# OS/editor files
+.DS_Store
+.vscode/

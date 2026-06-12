@@ -31,7 +31,7 @@ Goal: Improve the frontend result experience using dummy data by adding a tabbed
 ## Phase 6, Rule Based Analyzer
 
 Goal: Add basic skill detection, ATS score, strengths, weaknesses,
-recommendations, and an action plan.
+category feedback, and an action plan.
 
 The main analyzer logic should stay inside backend/services so it remains reusable.
 
@@ -42,21 +42,24 @@ Status: Completed with deterministic, explainable profile-quality analysis.
 Goal: Train and integrate a simple TF-IDF classifier to predict a
 resume/profile category while keeping the Phase 6 rule-based analyzer.
 
+## Phase 6.6, Architecture and UI/UX Refinement
+
+Goal: Keep rule-based profile-quality analysis separate from ML category
+prediction, return a flat detected-skills list, generate one action for each
+quality category, and show one compact prioritized action plan in the existing
+three-tab interface.
+
 ## Phase 7, Resume Upload
 
 Goal: Add PDF, DOCX, and TXT upload support using PyMuPDF and python-docx.
 
 The backend should extract resume text and pass it to the analyzer service.
 
-## Phase 8, UI Polish
-
-Goal: Improve the standalone course project frontend with better result cards, spacing, dashboard layout, and presentation readiness.
-
-## Phase 9, Optional AI Upgrade
+## Phase 8, Optional AI Upgrade
 
 Goal: Add Gemini or OpenAI API later for smarter resume feedback if time allows.
 
-## Phase 10, Reusable API Structure
+## Phase 9, Reusable API Structure
 
 Goal: Keep this project as a separate AI course project, but build the backend in a reusable way.
 

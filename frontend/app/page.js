@@ -1,6 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  CircleAlert,
+  CircleX,
+  Sparkles,
+} from "lucide-react";
 
 const API_URL = "http://127.0.0.1:5000/api/v1/analyze";
 
@@ -11,20 +18,45 @@ const LOADING_ITEMS = [
   "Checking profile structure",
   "Extracting skills",
   "Predicting resume category",
-  "Preparing recommendations",
+  "Preparing action plan",
 ];
 
-const SAMPLE_PROFILE =
-  "I am a computer science student with skills in Python, Flask, HTML, CSS, " +
-  "SQL, GitHub, and basic AI concepts. I have built academic projects using " +
-  "web development and databases. I am interested in software development, " +
-  "AI, and data analysis roles.";
+const SAMPLE_PROFILES = [
+  {
+    label: "Python Developer",
+    value:
+      "Computer science graduate and Python developer with experience using " +
+      "Flask, Django, SQL, REST APIs, Git, GitHub, Docker, Pandas, and Linux. " +
+      "Built a Flask inventory platform that managed more than 2,000 records " +
+      "and reduced manual reporting time by 35%. Completed a six-month software " +
+      "development internship and documented tested backend services.",
+  },
+  {
+    label: "Front End Developer",
+    value:
+      "UI Developer with HTML5, CSS3, JavaScript, jQuery, AJAX, AngularJS, " +
+      "ReactJS, Bootstrap, and NodeJS. Modified UI screens and built responsive " +
+      "front-end systems, reusable web components, layouts, positioning, media " +
+      "queries, and CSS behaviors.",
+  },
+  {
+    label: "Security Analyst",
+    value:
+      "Cybersecurity Analyst with experience in information security, " +
+      "penetration testing, threat hunting, incident response, application " +
+      "security, vulnerability assessment, SIEM monitoring, network security, " +
+      "Linux, Wireshark, and Python. Investigated security events during a " +
+      "six-month internship, documented 12 vulnerabilities, reduced remediation " +
+      "time by 30%, and built security monitoring tools. Bachelor degree in " +
+      "cybersecurity.",
+  },
+];
 
 const REPORT_INCLUDES = [
   "Profile quality score",
-  "Skill category breakdown",
+  "Detected technical skills",
   "ML category prediction",
-  "Priority recommendations",
+  "Focused action plan",
 ];
 
 const CHECK_SUMMARIES = [
@@ -32,19 +64,22 @@ const CHECK_SUMMARIES = [
     key: "passed",
     label: "Passed checks",
     color: "text-[#166534]",
-    fill: "bg-[#F0FDF4]",
+    fill: "bg-[#F4FAF5]",
+    icon: CheckCircle2,
   },
   {
     key: "warnings",
     label: "Warnings",
     color: "text-[#B45309]",
-    fill: "bg-[#FFFBEB]",
+    fill: "bg-[#FFFAED]",
+    icon: CircleAlert,
   },
   {
     key: "issues",
     label: "Issues",
     color: "text-[#B91C1C]",
-    fill: "bg-[#FEF2F2]",
+    fill: "bg-[#FFF5F4]",
+    icon: CircleX,
   },
 ];
 
@@ -56,32 +91,11 @@ const STATUS_STYLES = {
   Moderate: "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]",
 };
 
-const ACTION_PLAN_SECTIONS = [
-  {
-    key: "priority",
-    label: "Priority Fixes",
-    description: "Start with the highest-impact profile improvements.",
-    dotClass: "bg-[#B91C1C]",
-  },
-  {
-    key: "skills",
-    label: "Skill Improvements",
-    description: "Strengthen role-relevant skills and keywords.",
-    dotClass: "bg-[#D97706]",
-  },
-  {
-    key: "projects",
-    label: "Project Suggestions",
-    description: "Improve project evidence and technical presentation.",
-    dotClass: "bg-[#166534]",
-  },
-  {
-    key: "profile",
-    label: "Resume/Profile Improvements",
-    description: "Improve clarity, structure, and professional presentation.",
-    dotClass: "bg-[#4B5563]",
-  },
-];
+const PRIORITY_STYLES = {
+  High: "border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]",
+  Medium: "border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]",
+  Low: "border-[#BBF7D0] bg-[#F0FDF4] text-[#166534]",
+};
 
 function getTabSlug(tab) {
   return tab.toLowerCase().replace(" ", "-");
@@ -105,71 +119,6 @@ function formatCategoryLabel(category) {
   return String(category).replaceAll("_", " ");
 }
 
-function uniqueItems(items) {
-  return [...new Set(items.filter(Boolean))];
-}
-
-function includesAny(text, keywords) {
-  const normalizedText = text.toLowerCase();
-  return keywords.some((keyword) => normalizedText.includes(keyword));
-}
-
-function buildActionPlan(result) {
-  const recommendations = result.recommendations ?? {};
-  const priorityItems = uniqueItems(recommendations.high_priority ?? []);
-  const remainingItems = uniqueItems([
-    ...(recommendations.medium_priority ?? []),
-    ...(recommendations.low_priority ?? []),
-    ...(result.next_steps ?? []),
-  ]).filter((item) => !priorityItems.includes(item));
-
-  const sections = {
-    priority: priorityItems,
-    skills: [],
-    projects: [],
-    profile: [],
-  };
-
-  remainingItems.forEach((item) => {
-    if (
-      includesAny(item, [
-        "project",
-        "github",
-        "portfolio",
-        "repository",
-      ])
-    ) {
-      sections.projects.push(item);
-    } else if (
-      includesAny(item, [
-        "skill",
-        "keyword",
-        "tool",
-        "technology",
-      ])
-    ) {
-      sections.skills.push(item);
-    } else if (
-      includesAny(item, [
-        "profile",
-        "summary",
-        "format",
-        "section",
-        "sentence",
-        "education",
-        "experience",
-        "qualification",
-        "action verb",
-        "structure",
-      ])
-    ) {
-      sections.profile.push(item);
-    }
-  });
-
-  return sections;
-}
-
 function SectionLabel({ children }) {
   return (
     <p className="text-xs font-semibold tracking-[0.18em] text-[#166534]">
@@ -180,7 +129,7 @@ function SectionLabel({ children }) {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border border-[#E4E2DC] bg-white p-5 shadow-sm sm:p-6">
+    <div className="rounded-2xl border border-[#E1DED6] bg-white p-5 shadow-[0_18px_55px_rgba(43,49,45,0.06)] sm:p-7">
       <div className="border-b border-[#EBEBEB] pb-5">
         <SectionLabel>ANALYSIS REPORT</SectionLabel>
         <h2 className="mt-3 text-xl font-semibold tracking-tight text-[#111827]">
@@ -219,7 +168,7 @@ function EmptyState() {
 function LoadingState({ completedSteps }) {
   return (
     <div
-      className="min-h-[520px] rounded-xl border border-[#E4E2DC] bg-white p-6 shadow-sm"
+      className="min-h-[520px] rounded-2xl border border-[#E1DED6] bg-white p-6 shadow-[0_18px_55px_rgba(43,49,45,0.06)]"
       aria-live="polite"
     >
       <SectionLabel>ANALYZING PROFILE</SectionLabel>
@@ -313,7 +262,7 @@ function OverviewTab({ result }) {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
+      <section className="rounded-2xl border border-[#E1DED6] bg-white p-5 shadow-[0_8px_30px_rgba(43,49,45,0.035)]">
         <SectionLabel>OVERALL SCORE</SectionLabel>
         <div className="mt-3 flex items-center gap-3">
           <p className="text-4xl font-semibold tracking-tight text-[#111827]">
@@ -340,23 +289,32 @@ function OverviewTab({ result }) {
         </div>
       </section>
 
-      <section className="grid grid-cols-3 gap-3">
-        {CHECK_SUMMARIES.map((item) => (
-          <article
-            key={item.label}
-            className={`rounded-xl border border-[#E4E2DC] p-4 ${item.fill}`}
-          >
-            <p className={`text-2xl font-semibold ${item.color}`}>
-              {checks[item.key] ?? 0}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-[#6B7280]">
-              {item.label}
-            </p>
-          </article>
-        ))}
+      <section className="grid grid-cols-3 overflow-hidden rounded-2xl border border-[#E1DED6] bg-white shadow-[0_8px_30px_rgba(43,49,45,0.035)]">
+        {CHECK_SUMMARIES.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <article
+              key={item.label}
+              className={`flex min-w-0 items-center gap-2.5 border-r border-[#E7E4DD] px-3 py-3 last:border-r-0 sm:px-4 ${item.fill}`}
+            >
+              <Icon className={`h-4 w-4 shrink-0 ${item.color}`} />
+              <div className="min-w-0">
+                <p
+                  className={`text-lg font-semibold leading-none ${item.color}`}
+                >
+                  {checks[item.key] ?? 0}
+                </p>
+                <p className="mt-1 truncate text-[11px] text-[#6B7280]">
+                  {item.label}
+                </p>
+              </div>
+            </article>
+          );
+        })}
       </section>
 
-      <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
+      <section className="rounded-2xl border border-[#E1DED6] bg-white p-5 shadow-[0_8px_30px_rgba(43,49,45,0.035)]">
         <SectionLabel>ML CATEGORY PREDICTION</SectionLabel>
         {mlCategory ? (
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -407,7 +365,7 @@ function OverviewTab({ result }) {
         )}
       </section>
 
-      <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
+      <section className="rounded-2xl border border-[#E1DED6] bg-white p-5 shadow-[0_8px_30px_rgba(43,49,45,0.035)]">
         <SectionLabel>SUMMARY</SectionLabel>
         <p className="mt-3 text-sm leading-6 text-[#4B5563]">
           {result.summary}
@@ -438,6 +396,8 @@ function OverviewTab({ result }) {
 }
 
 function AnalysisTab({ result }) {
+  const detectedSkills = Array.isArray(result.skills) ? result.skills : [];
+
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2">
@@ -447,7 +407,7 @@ function AnalysisTab({ result }) {
           return (
             <article
               key={item.category}
-              className="rounded-xl border border-[#E4E2DC] bg-white p-4"
+              className="rounded-2xl border border-[#E1DED6] bg-white p-4 shadow-[0_8px_30px_rgba(43,49,45,0.03)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -473,87 +433,106 @@ function AnalysisTab({ result }) {
               <p className="mt-3 text-sm leading-5 text-[#6B7280]">
                 {item.feedback}
               </p>
+              {item.action && (
+                <div className="mt-4 border-t border-[#EBEBEB] pt-3">
+                  <p className="text-[11px] font-semibold tracking-wide text-[#6B7280]">
+                    SUGGESTED ACTION
+                  </p>
+                  <p className="mt-1.5 text-sm leading-5 text-[#374151]">
+                    {item.action}
+                  </p>
+                </div>
+              )}
             </article>
           );
         })}
       </section>
 
-      <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
-        <SectionLabel>DETECTED SKILLS</SectionLabel>
-        <div className="mt-4 space-y-4">
-          {Object.entries(result.skills ?? {}).map(([category, skills]) => (
-            <div key={category}>
-              <p className="text-sm font-semibold text-[#374151]">{category}</p>
-              {skills.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="rounded-full border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-1 text-xs text-[#9CA3AF]">
-                  No skills detected
-                </p>
-              )}
+      <details className="group rounded-2xl border border-[#E1DED6] bg-white shadow-[0_8px_30px_rgba(43,49,45,0.03)]">
+        <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F1F7F2] text-[#166534]">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <SectionLabel>DETECTED SKILLS</SectionLabel>
+            <p className="mt-1 text-sm text-[#6B7280]">
+              {detectedSkills.length} technical skill
+              {detectedSkills.length === 1 ? "" : "s"} found
+            </p>
+          </div>
+          <ChevronDown className="h-4 w-4 text-[#6B7280] transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-[#EAE7E0] px-5 pb-5 pt-4">
+          {detectedSkills.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {detectedSkills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full border border-[#CDE8D2] bg-[#F4FAF5] px-3 py-1.5 text-xs font-medium text-[#166534]"
+                >
+                  {skill}
+                </span>
+              ))}
             </div>
-          ))}
+          ) : (
+            <p className="text-sm text-[#9CA3AF]">No skills detected</p>
+          )}
         </div>
-      </section>
+      </details>
     </div>
   );
 }
 
 function ActionPlanTab({ result }) {
-  const actionPlan = buildActionPlan(result);
+  const actionPlan = Array.isArray(result.action_plan)
+    ? result.action_plan
+    : [];
 
   return (
-    <div className="space-y-4">
-      {ACTION_PLAN_SECTIONS.map((section, index) => (
-        <details
-          key={section.key}
-          open={index === 0}
-          className="group rounded-xl border border-[#E4E2DC] bg-white"
-        >
-          <summary className="flex cursor-pointer list-none items-center gap-3 p-5">
-            <span
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${section.dotClass}`}
-            />
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-[#111827]">{section.label}</h3>
-              <p className="mt-1 text-xs leading-5 text-[#6B7280]">
-                {section.description}
-              </p>
-            </div>
-            <span className="text-lg text-[#6B7280] transition group-open:rotate-45">
-              +
-            </span>
-          </summary>
-          <div className="border-t border-[#EBEBEB] px-5 pb-5">
-            {actionPlan[section.key].length > 0 ? (
-              <ul className="space-y-3 pt-4">
-                {actionPlan[section.key].map((item) => (
-                  <li
-                    key={item}
-                    className="flex gap-3 text-sm leading-6 text-[#4B5563]"
+    <div className="rounded-2xl border border-[#E1DED6] bg-white p-5 shadow-[0_8px_30px_rgba(43,49,45,0.03)]">
+      <SectionLabel>ACTION PLAN</SectionLabel>
+      <h2 className="mt-2 text-lg font-semibold text-[#111827]">
+        Start with these improvements
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-[#6B7280]">
+        The plan is ordered by the weakest areas in your profile analysis.
+      </p>
+
+      {actionPlan.length > 0 ? (
+        <ol className="mt-5 divide-y divide-[#EBEBEB]">
+          {actionPlan.map((item, index) => (
+            <li
+              key={`${item.category}-${item.action}`}
+              className="flex gap-4 py-4 first:pt-0 last:pb-0"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F1F7F2] text-xs font-semibold text-[#166534]">
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111827]">
+                    {item.category}
+                  </h3>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                      PRIORITY_STYLES[item.priority] || PRIORITY_STYLES.Medium
+                    }`}
                   >
-                    <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9CA3AF]" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="pt-4 text-sm text-[#9CA3AF]">
-                No additional items in this section.
-              </p>
-            )}
-          </div>
-        </details>
-      ))}
+                    {item.priority || "Medium"}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-sm leading-6 text-[#4B5563]">
+                  {item.action}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-5 text-sm text-[#9CA3AF]">
+          No action plan items are available.
+        </p>
+      )}
     </div>
   );
 }
@@ -563,7 +542,7 @@ function ResultsReport({ result, activeTab, onTabChange }) {
 
   return (
     <div
-      className="min-h-[520px] rounded-xl border border-[#E4E2DC] bg-[#FAFAF9] shadow-sm"
+      className="min-h-[520px] overflow-hidden rounded-2xl border border-[#DEDCD5] bg-[#FAFAF8] shadow-[0_20px_60px_rgba(43,49,45,0.07)]"
       aria-live="polite"
     >
       <div className="border-b border-[#E4E2DC] bg-white px-5 pt-5 sm:px-6">
@@ -620,8 +599,16 @@ export default function Home() {
   const [completedStepCount, setCompletedStepCount] = useState(0);
   const [activeTab, setActiveTab] = useState("Overview");
 
-  function handleUseSampleProfile() {
-    setProfileText(SAMPLE_PROFILE);
+  function handleSampleProfileChange(event) {
+    const selectedProfile = SAMPLE_PROFILES.find(
+      (sample) => sample.label === event.target.value,
+    );
+
+    if (!selectedProfile) {
+      return;
+    }
+
+    setProfileText(selectedProfile.value);
     setErrorMessage("");
     setAnalysisResult(null);
     setActiveTab("Overview");
@@ -687,7 +674,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F4F1] px-4 pb-20 pt-10 text-[#111827] sm:px-6 sm:pt-12">
+    <main className="min-h-screen bg-[#F3F2EE] px-4 pb-20 pt-10 text-[#17201B] sm:px-6 sm:pt-14">
       <div className="mx-auto max-w-6xl">
         <header className="max-w-3xl">
           <SectionLabel>RESUME ANALYZER</SectionLabel>
@@ -700,10 +687,10 @@ export default function Home() {
           </p>
         </header>
 
-        <section className="mt-9 grid items-start gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+        <section className="mt-10 grid items-start gap-7 lg:grid-cols-[0.82fr_1.18fr]">
           <form
             onSubmit={handleSubmit}
-            className="rounded-xl border border-[#E4E2DC] bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-8"
+            className="rounded-2xl border border-[#DEDCD5] bg-white p-5 shadow-[0_18px_55px_rgba(43,49,45,0.06)] sm:p-6 lg:sticky lg:top-8"
           >
             <SectionLabel>PROFILE INPUT</SectionLabel>
             <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#111827]">
@@ -720,14 +707,23 @@ export default function Home() {
               >
                 PROFILE TEXT
               </label>
-              <button
-                type="button"
-                onClick={handleUseSampleProfile}
-                disabled={isLoading}
-                className="text-xs font-semibold text-[#166534] underline decoration-[#BBF7D0] underline-offset-4 transition hover:text-[#14532D] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Use sample profile
-              </button>
+              <div className="relative">
+                <select
+                  aria-label="Use a sample profile"
+                  value=""
+                  onChange={handleSampleProfileChange}
+                  disabled={isLoading}
+                  className="appearance-none rounded-lg border border-[#D8D5CD] bg-[#FAFAF8] py-2 pl-3 pr-8 text-xs font-semibold text-[#166534] outline-none transition hover:border-[#BFC8BE] focus:border-[#166534] focus:ring-2 focus:ring-[#166534]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">Use sample profile</option>
+                  {SAMPLE_PROFILES.map((sample) => (
+                    <option key={sample.label} value={sample.label}>
+                      {sample.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#166534]" />
+              </div>
             </div>
             <textarea
               id="profile-text"
@@ -735,7 +731,7 @@ export default function Home() {
               value={profileText}
               onChange={handleProfileTextChange}
               disabled={isLoading}
-              className="mt-2.5 min-h-64 w-full resize-y rounded-lg border border-[#D9D7D1] bg-white px-4 py-3 text-sm leading-6 text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#166534] focus:ring-2 focus:ring-[#166534]/15 disabled:cursor-not-allowed disabled:bg-[#F9FAFB]"
+              className="mt-2.5 min-h-64 w-full resize-y rounded-xl border border-[#D8D5CD] bg-[#FEFEFD] px-4 py-3 text-sm leading-6 text-[#17201B] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#166534] focus:ring-2 focus:ring-[#166534]/12 disabled:cursor-not-allowed disabled:bg-[#F9FAFB]"
               placeholder="Paste your resume text, profile details, or professional summary here..."
             />
             <p className="mt-2 text-xs leading-5 text-[#6B7280]">
@@ -754,14 +750,10 @@ export default function Home() {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-5 flex w-full items-center justify-center rounded-lg bg-[#166534] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#14532D] focus:outline-none focus:ring-2 focus:ring-[#166534] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65"
+              className="mt-5 flex w-full items-center justify-center rounded-xl bg-[#166534] px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_22px_rgba(22,101,52,0.18)] transition hover:bg-[#14532D] focus:outline-none focus:ring-2 focus:ring-[#166534] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65"
             >
               {isLoading ? "Analyzing..." : "Analyze Profile"}
             </button>
-            <p className="mt-3 text-center text-xs text-[#9CA3AF]">
-              Rule-based analysis with optional ML category prediction. This is
-              not live job matching.
-            </p>
           </form>
 
           <div>

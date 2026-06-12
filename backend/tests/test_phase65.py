@@ -132,10 +132,10 @@ class MlClassifierTests(unittest.TestCase):
             "checks",
             "category_analysis",
             "skills",
-            "recommendations",
-            "next_steps",
+            "action_plan",
         }
         self.assertTrue(phase6_fields.issubset(result))
+        self.assertIsInstance(result["skills"], list)
         self.assertEqual(result["ml_prediction"], expected_prediction)
 
     def test_supported_dataset_columns_are_detected(self):

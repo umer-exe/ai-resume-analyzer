@@ -3,7 +3,7 @@ import "./globals.css";
 export const metadata = {
   title: "Resume & Profile Analyzer",
   description:
-    "Identify skill gaps, match roles, and build a clearer career path.",
+    "Review profile quality, detect skills, and predict a resume category.",
 };
 
 export default function RootLayout({ children }) {

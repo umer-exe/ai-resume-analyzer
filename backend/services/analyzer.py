@@ -6,54 +6,44 @@ from functools import lru_cache
 from services.ml_classifier import predict_role
 
 
-SKILL_CATALOG = {
-    "Programming": [
-        ("Python", ("python",)),
-        ("JavaScript", ("javascript", "java script", "js")),
-        ("Java", ("java",)),
-        ("C++", ("c++", "cpp")),
-        ("C#", ("c#", "c sharp")),
-        ("SQL", ("sql", "mysql", "postgresql", "postgres", "sqlite")),
-    ],
-    "Web Development": [
-        ("HTML", ("html", "html5")),
-        ("CSS", ("css", "css3")),
-        ("Flask", ("flask",)),
-        ("Django", ("django",)),
-        ("React", ("react", "react.js", "reactjs")),
-        ("Node.js", ("node.js", "nodejs", "node js")),
-        ("REST APIs", ("rest api", "rest apis", "restful api", "api", "apis")),
-    ],
-    "AI and Data": [
-        (
-            "Artificial Intelligence",
-            ("artificial intelligence", "basic ai concepts", "ai concepts", "ai"),
-        ),
-        ("Machine Learning", ("machine learning", "machine-learning", "ml")),
-        ("Pandas", ("pandas",)),
-        ("NumPy", ("numpy",)),
-        (
-            "Data Visualization",
-            ("data visualization", "data visualisation", "visualization"),
-        ),
-        ("Excel", ("excel", "microsoft excel")),
-        ("Power BI", ("power bi", "powerbi")),
-    ],
-    "Cybersecurity and Networking": [
-        ("Cybersecurity", ("cybersecurity", "cyber security")),
-        ("Networking", ("networking", "computer networks", "network security")),
-        ("Linux", ("linux",)),
-        ("Wireshark", ("wireshark",)),
-    ],
-    "Cloud and Tools": [
-        ("GitHub", ("github",)),
-        ("Git", ("git",)),
-        ("Docker", ("docker",)),
-        ("AWS", ("aws", "amazon web services")),
-        ("Azure", ("azure", "microsoft azure")),
-        ("Google Cloud", ("google cloud", "gcp")),
-    ],
-}
+SKILL_CATALOG = (
+    ("Python", ("python",)),
+    ("JavaScript", ("javascript", "java script", "js")),
+    ("Java", ("java",)),
+    ("C++", ("c++", "cpp")),
+    ("C#", ("c#", "c sharp")),
+    ("SQL", ("sql", "mysql", "postgresql", "postgres", "sqlite")),
+    ("HTML", ("html", "html5")),
+    ("CSS", ("css", "css3")),
+    ("Flask", ("flask",)),
+    ("Django", ("django",)),
+    ("React", ("react", "react.js", "reactjs")),
+    ("Node.js", ("node.js", "nodejs", "node js")),
+    ("REST APIs", ("rest api", "rest apis", "restful api", "api", "apis")),
+    (
+        "Artificial Intelligence",
+        ("artificial intelligence", "basic ai concepts", "ai concepts", "ai"),
+    ),
+    ("Machine Learning", ("machine learning", "machine-learning", "ml")),
+    ("Pandas", ("pandas",)),
+    ("NumPy", ("numpy",)),
+    (
+        "Data Visualization",
+        ("data visualization", "data visualisation", "visualization"),
+    ),
+    ("Excel", ("excel", "microsoft excel")),
+    ("Power BI", ("power bi", "powerbi")),
+    ("Cybersecurity", ("cybersecurity", "cyber security")),
+    ("Networking", ("networking", "computer networks", "network security")),
+    ("Linux", ("linux",)),
+    ("Wireshark", ("wireshark",)),
+    ("GitHub", ("github",)),
+    ("Git", ("git",)),
+    ("Docker", ("docker",)),
+    ("AWS", ("aws", "amazon web services")),
+    ("Azure", ("azure", "microsoft azure")),
+    ("Google Cloud", ("google cloud", "gcp")),
+)
 
 CATEGORY_WEIGHTS = {
     "Skills": 0.25,
@@ -89,18 +79,6 @@ PROJECT_TERMS = (
     "portfolio",
 )
 
-PROJECT_DETAIL_TERMS = (
-    "architecture",
-    "backend",
-    "database",
-    "dataset",
-    "frontend",
-    "model",
-    "outcome",
-    "technology",
-    "tool",
-)
-
 EXPERIENCE_TERMS = (
     "employment",
     "experience",
@@ -109,16 +87,6 @@ EXPERIENCE_TERMS = (
     "internship",
     "volunteer",
     "worked",
-)
-
-ROLE_KEYWORDS = (
-    "analyst",
-    "data analysis",
-    "developer",
-    "development",
-    "engineer",
-    "machine learning",
-    "software",
 )
 
 EDUCATION_TERMS = (
@@ -167,20 +135,18 @@ HEADING_PATTERN = re.compile(
 )
 BULLET_PATTERN = re.compile(r"(?m)^\s*(?:[-*]|\d+[.)])\s+")
 
-RECOMMENDATION_BY_CATEGORY = {
-    "Skills": "Add more role-relevant technical skills and tools.",
-    "Projects": (
-        "Expand project descriptions with the tools used and measurable outcomes."
-    ),
+ACTION_BY_CATEGORY = {
+    "Skills": "Add a concise skills section with the technical tools you can demonstrate.",
+    "Projects": "Describe projects with the tools used, your contribution, and a measurable result.",
     "Experience": (
-        "Add practical experience, responsibilities, or transferable achievements."
+        "Add an internship, freelance, volunteer, or academic responsibility with clear outcomes."
     ),
-    "Education": "State your education, field of study, and qualification clearly.",
+    "Education": "State your qualification, field of study, institution, and dates clearly.",
     "ATS Keywords": (
-        "Use stronger action verbs and role-specific keywords from target roles."
+        "Use clear technical skills, action verbs, and measurable achievements throughout the profile."
     ),
     "Formatting": (
-        "Improve structure with clear sections, concise sentences, and bullet points."
+        "Organize the profile with clear headings, concise bullet points, and consistent spacing."
     ),
 }
 
@@ -211,7 +177,7 @@ def _round_score(value):
 
 
 def _category_status(score):
-    if score >= 70:
+    if score >= 75:
         return "Good"
     if score >= 50:
         return "Warning"
@@ -227,112 +193,102 @@ def _overall_status(score):
 
 
 def extract_skills(profile_text):
-    """Return grouped canonical skills in deterministic catalog order."""
-    detected_skills = {}
-
-    for category, skill_definitions in SKILL_CATALOG.items():
-        category_skills = []
-
-        for skill, aliases in skill_definitions:
-            if any(_contains_phrase(profile_text, alias) for alias in aliases):
-                category_skills.append(skill)
-
-        detected_skills[category] = category_skills
-
-    return detected_skills
-
-
-def _flatten_skills(grouped_skills):
+    """Return unique canonical skills in deterministic catalog order."""
     return [
         skill
-        for category_skills in grouped_skills.values()
-        for skill in category_skills
+        for skill, aliases in SKILL_CATALOG
+        if any(_contains_phrase(profile_text, alias) for alias in aliases)
     ]
 
 
-def _skills_analysis(grouped_skills):
-    skill_count = sum(len(skills) for skills in grouped_skills.values())
-    category_count = sum(bool(skills) for skills in grouped_skills.values())
-    score = _round_score(
-        (skill_count * 8)
-        + (category_count * 7)
-        + (10 if skill_count >= 5 else 0)
-    )
+def _skills_analysis(detected_skills):
+    skill_count = len(detected_skills)
+    if skill_count >= 8:
+        score = 100
+    elif skill_count >= 5:
+        score = 80
+    elif skill_count >= 3:
+        score = 60
+    elif skill_count >= 1:
+        score = 40
+    else:
+        score = 0
 
     if score >= 70:
-        feedback = (
-            f"{skill_count} relevant skills were detected across "
-            f"{category_count} categories."
+        feedback = f"{skill_count} technical skills were clearly detected."
+        action = (
+            "Support the listed skills with clear project or experience evidence."
         )
     elif score >= 50:
-        feedback = (
-            "Some relevant skills are present, but the profile needs broader "
-            "role-specific coverage."
-        )
+        feedback = "Several technical skills are present, but the skills section could be clearer."
+        action = "Group the detected skills in one concise technical skills section."
     else:
-        feedback = (
-            "Add a clearer technical skills section with tools relevant to "
-            "your target role."
-        )
+        feedback = "Few clearly named technical skills were detected."
+        action = ACTION_BY_CATEGORY["Skills"]
 
-    return score, feedback
+    return score, feedback, action
 
 
 def _projects_analysis(profile_text, detected_skill_count):
     has_project = _contains_any(profile_text, PROJECT_TERMS)
     has_action = _contains_any(profile_text, ACTION_VERBS)
     has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
-    has_repository = _contains_any(profile_text, ("github", "portfolio"))
-    has_detail = detected_skill_count > 0 and _contains_any(
-        profile_text, PROJECT_DETAIL_TERMS
-    )
+    has_detail = detected_skill_count > 0 and has_project
 
-    score = _round_score(
-        10
-        + (30 if has_project else 0)
-        + (15 if has_action else 0)
-        + (25 if has_measurement else 0)
-        + (10 if has_repository else 0)
-        + (10 if has_detail else 0)
+    score = (
+        _round_score(
+            20
+            + (25 if has_detail else 0)
+            + (20 if has_action else 0)
+            + (35 if has_measurement else 0)
+        )
+        if has_project
+        else 0
     )
 
     if not has_project:
         feedback = "No clear project evidence was detected."
+        action = ACTION_BY_CATEGORY["Projects"]
+    elif not has_detail:
+        feedback = "Projects are mentioned, but the tools and contribution are unclear."
+        action = "Name the tools used and explain your contribution to each project."
     elif not has_measurement:
         feedback = "Projects are present, but they need measurable outcomes."
+        action = "Add one concrete result, user count, percentage, or performance outcome."
     else:
-        feedback = "Projects include useful technical detail and measurable evidence."
+        feedback = "Projects include technical detail and measurable evidence."
+        action = "Keep project descriptions concise and lead with the strongest outcome."
 
-    return score, feedback
+    return score, feedback, action
 
 
 def _experience_analysis(profile_text):
     has_experience = _contains_any(profile_text, EXPERIENCE_TERMS)
-    has_role = _contains_any(profile_text, ROLE_KEYWORDS)
     has_duration = bool(DURATION_PATTERN.search(profile_text))
     has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
-    action_count = _count_phrases(profile_text, ACTION_VERBS)
+    has_action = _contains_any(profile_text, ACTION_VERBS)
 
     score = _round_score(
-        10
-        + (30 if has_experience else 0)
-        + (20 if has_role else 0)
-        + (15 if has_duration else 0)
-        + (15 if has_measurement else 0)
-        + (10 if action_count >= 2 else 0)
+        (40 if has_experience else 0)
+        + (20 if has_action else 0)
+        + (20 if has_duration else 0)
+        + (20 if has_measurement else 0)
     )
 
     if not has_experience:
-        feedback = (
-            "Add internships, volunteer work, freelance work, or transferable "
-            "experience."
-        )
+        feedback = "No clear practical experience was detected."
+        action = ACTION_BY_CATEGORY["Experience"]
+    elif not has_action:
+        feedback = "Experience is present, but responsibilities are not described clearly."
+        action = "Rewrite experience points with direct action verbs and clear responsibilities."
     elif not has_measurement:
         feedback = "Experience is present but needs measurable achievements."
+        action = "Add a measurable result to at least one experience entry."
     else:
-        feedback = "Experience includes role context and measurable evidence."
+        feedback = "Experience includes clear responsibilities and measurable evidence."
+        action = "Keep the strongest achievement first in each experience entry."
 
-    return score, feedback
+    return score, feedback, action
 
 
 def _education_analysis(profile_text):
@@ -350,37 +306,41 @@ def _education_analysis(profile_text):
 
     if not has_education:
         feedback = "Education details were not clearly detected."
+        action = ACTION_BY_CATEGORY["Education"]
     elif not has_degree:
         feedback = "Education is present; add the qualification and study dates."
+        action = "Add the qualification name and expected or completed study dates."
     else:
         feedback = "Education and qualification details are clearly represented."
+        action = "Keep education details concise and consistently formatted."
 
-    return score, feedback
+    return score, feedback, action
 
 
 def _ats_keywords_analysis(profile_text, detected_skill_count):
     action_count = _count_phrases(profile_text, ACTION_VERBS)
-    has_role_keywords = _contains_any(profile_text, ROLE_KEYWORDS)
     has_measurement = bool(MEASURABLE_PATTERN.search(profile_text))
 
     score = _round_score(
-        min(35, detected_skill_count * 5)
-        + min(25, action_count * 5)
-        + (20 if has_role_keywords else 0)
-        + (20 if has_measurement else 0)
+        (40 if detected_skill_count >= 3 else 20 if detected_skill_count else 0)
+        + (30 if action_count >= 2 else 15 if action_count else 0)
+        + (30 if has_measurement else 0)
     )
 
-    if score >= 70:
-        feedback = "The profile contains useful skills, action verbs, and keywords."
+    if score >= 75:
+        feedback = "The profile uses clear skills, action verbs, and measurable evidence."
+        action = "Keep technical terms specific and connect them to demonstrated results."
+    elif action_count == 0:
+        feedback = "Add direct action verbs to describe contributions and achievements."
+        action = "Start contribution statements with direct verbs such as built, improved, or tested."
     elif not has_measurement:
-        feedback = (
-            "Add measurable achievements and more keywords from target role "
-            "descriptions."
-        )
+        feedback = "Add measurable results to strengthen the profile evidence."
+        action = "Add numbers, percentages, scale, or time saved to key achievements."
     else:
-        feedback = "Add more role-specific skills and action verbs."
+        feedback = "Name more technical skills clearly in the profile."
+        action = ACTION_BY_CATEGORY["ATS Keywords"]
 
-    return score, feedback
+    return score, feedback, action
 
 
 def _formatting_analysis(profile_text):
@@ -394,29 +354,30 @@ def _formatting_analysis(profile_text):
     is_readable_case = profile_text != profile_text.upper()
     average_sentence_length = word_count / max(sentence_count, 1)
 
-    length_score = 30 if word_count >= 80 else 25 if word_count >= 40 else 15
-    sentence_score = 20 if sentence_count >= 3 else 15 if sentence_count >= 2 else 5
+    length_score = 30 if word_count >= 80 else 20 if word_count >= 40 else 10
+    readable_sentences = sentence_count >= 2 and average_sentence_length <= 35
 
     score = _round_score(
         length_score
-        + sentence_score
-        + (20 if has_headings else 0)
-        + (15 if has_bullets else 0)
-        + (10 if is_readable_case else 0)
-        + (5 if average_sentence_length <= 35 else 0)
+        + (25 if has_headings else 0)
+        + (25 if has_bullets else 0)
+        + (20 if readable_sentences and is_readable_case else 0)
     )
 
-    if score >= 70:
+    if score >= 75:
         feedback = "The profile uses readable structure and concise formatting."
+        action = "Keep headings, bullets, spacing, and sentence style consistent."
     elif not has_headings and not has_bullets:
         feedback = "Add clear section headings and concise bullet points."
+        action = ACTION_BY_CATEGORY["Formatting"]
     else:
         feedback = "Improve spacing, sentence length, and section consistency."
+        action = "Shorten dense sentences and make section formatting consistent."
 
-    return score, feedback
+    return score, feedback, action
 
 
-def _build_recommendations(category_analysis):
+def _build_action_plan(category_analysis):
     ranked_categories = sorted(
         category_analysis,
         key=lambda category: (
@@ -425,76 +386,36 @@ def _build_recommendations(category_analysis):
         ),
     )
 
-    needs_work = [
-        category for category in ranked_categories if category["status"] == "Needs Work"
-    ]
-    warnings = [
-        category for category in ranked_categories if category["status"] == "Warning"
-    ]
-
-    high_categories = needs_work[:2] or ranked_categories[:1]
-    medium_categories = [
+    categories_to_improve = [
         category
-        for category in warnings
-        if category["category"]
-        not in {high_category["category"] for high_category in high_categories}
-    ][:2]
-
-    if not medium_categories:
-        medium_categories = [
-            category
-            for category in ranked_categories
-            if category["category"]
-            not in {high_category["category"] for high_category in high_categories}
-        ][:2]
-
-    return {
-        "high_priority": [
-            RECOMMENDATION_BY_CATEGORY[category["category"]]
-            for category in high_categories
-        ],
-        "medium_priority": [
-            RECOMMENDATION_BY_CATEGORY[category["category"]]
-            for category in medium_categories
-        ],
-        "low_priority": [
-            "Add or refine a concise professional summary.",
-            "Review formatting consistency before applying.",
-        ],
-    }
-
-
-def _build_next_steps(category_analysis):
-    weakest_category = min(
-        category_analysis,
-        key=lambda category: (
-            category["score"],
-            list(CATEGORY_WEIGHTS).index(category["category"]),
-        ),
-    )
+        for category in ranked_categories
+        if category["status"] != "Good"
+    ]
+    selected_categories = categories_to_improve[:3] or ranked_categories[:1]
 
     return [
-        RECOMMENDATION_BY_CATEGORY[weakest_category["category"]],
-        "Add 2 to 3 projects with tools, responsibilities, and measurable outcomes.",
-        (
-            "Compare your detected skills with relevant job descriptions and "
-            "add missing skills you can demonstrate."
-        ),
-        "Publish relevant projects and documentation on GitHub.",
-        (
-            "Tailor the profile for internships or entry-level roles and review "
-            "each role description before applying."
-        ),
+        {
+            "category": category["category"],
+            "priority": (
+                "High"
+                if category["status"] == "Needs Work"
+                else "Medium"
+                if category["status"] == "Warning"
+                else "Low"
+            ),
+            "action": category["action"],
+        }
+        for category in selected_categories
     ]
 
 
 def analyze_profile(profile_text):
-    """Analyze profile text and return the Phase 5.5-compatible response data."""
-    grouped_skills = extract_skills(profile_text)
-    detected_skill_count = len(_flatten_skills(grouped_skills))
+    """Return deterministic profile-quality analysis plus the ML prediction."""
+    detected_skills = extract_skills(profile_text)
+    detected_skill_count = len(detected_skills)
 
     category_results = [
-        ("Skills", *_skills_analysis(grouped_skills)),
+        ("Skills", *_skills_analysis(detected_skills)),
         ("Projects", *_projects_analysis(profile_text, detected_skill_count)),
         ("Experience", *_experience_analysis(profile_text)),
         ("Education", *_education_analysis(profile_text)),
@@ -511,8 +432,9 @@ def analyze_profile(profile_text):
             "score": score,
             "status": _category_status(score),
             "feedback": feedback,
+            "action": action,
         }
-        for category, score, feedback in category_results
+        for category, score, feedback, action in category_results
     ]
 
     overall_score = _round_score(
@@ -567,8 +489,7 @@ def analyze_profile(profile_text):
         "summary": summary,
         "checks": checks,
         "category_analysis": category_analysis,
-        "skills": grouped_skills,
-        "recommendations": _build_recommendations(category_analysis),
-        "next_steps": _build_next_steps(category_analysis),
+        "skills": detected_skills,
+        "action_plan": _build_action_plan(category_analysis),
         "ml_prediction": ml_prediction,
     }

@@ -31,8 +31,7 @@ class AnalyzerTests(unittest.TestCase):
                 "checks",
                 "category_analysis",
                 "skills",
-                "recommendations",
-                "next_steps",
+                "action_plan",
                 "ml_prediction",
             },
         )
@@ -41,10 +40,25 @@ class AnalyzerTests(unittest.TestCase):
         self.assertLessEqual(first_result["score"], 100)
         self.assertEqual(len(first_result["category_analysis"]), 6)
         self.assertEqual(
+            [
+                category["category"]
+                for category in first_result["category_analysis"]
+            ],
+            [
+                "Skills",
+                "Projects",
+                "Experience",
+                "Education",
+                "ATS Keywords",
+                "Formatting",
+            ],
+        )
+        self.assertEqual(
             sum(first_result["checks"].values()),
             len(first_result["category_analysis"]),
         )
-        self.assertEqual(len(first_result["next_steps"]), 5)
+        self.assertGreater(len(first_result["action_plan"]), 0)
+        self.assertLessEqual(len(first_result["action_plan"]), 3)
         self.assertEqual(
             set(first_result["ml_prediction"]),
             {
@@ -58,23 +72,47 @@ class AnalyzerTests(unittest.TestCase):
         )
 
         for category in first_result["category_analysis"]:
+            self.assertEqual(
+                set(category),
+                {"category", "score", "status", "feedback", "action"},
+            )
             self.assertIsInstance(category["score"], int)
             self.assertGreaterEqual(category["score"], 0)
             self.assertLessEqual(category["score"], 100)
+            self.assertTrue(category["action"])
 
     def test_phrase_matching_aliases_and_false_positive_prevention(self):
         skills = extract_skills(
             "JavaScript painting flasking C++ MACHINE LEARNING "
-            "artificial intelligence JavaScript"
+            "artificial intelligence JavaScript python PYTHON"
         )
 
-        self.assertEqual(skills["Programming"], ["JavaScript", "C++"])
         self.assertEqual(
-            skills["AI and Data"],
-            ["Artificial Intelligence", "Machine Learning"],
+            skills,
+            [
+                "Python",
+                "JavaScript",
+                "C++",
+                "Artificial Intelligence",
+                "Machine Learning",
+            ],
         )
-        self.assertNotIn("Java", skills["Programming"])
-        self.assertNotIn("Flask", skills["Web Development"])
+        self.assertNotIn("Java", skills)
+        self.assertNotIn("Flask", skills)
+
+    def test_skills_are_a_flat_ordered_unique_list(self):
+        result = analyze_profile("GitHub Git SQL MySQL Python python Flask")
+
+        self.assertEqual(
+            result["skills"],
+            ["Python", "SQL", "Flask", "GitHub", "Git"],
+        )
+        self.assertEqual(len(result["skills"]), len(set(result["skills"])))
+
+    def test_no_detected_skills_returns_empty_list(self):
+        result = analyze_profile("Organized student seeking an opportunity.")
+
+        self.assertEqual(result["skills"], [])
 
     def test_richer_profile_scores_higher_than_sparse_profile(self):
         sparse_result = analyze_profile("Python")
@@ -88,16 +126,42 @@ class AnalyzerTests(unittest.TestCase):
         )
 
         self.assertGreater(rich_result["score"], sparse_result["score"])
+        self.assertEqual(len(rich_result["action_plan"]), 1)
+        self.assertEqual(rich_result["action_plan"][0]["priority"], "Low")
 
     def test_action_plan_is_quality_focused_without_role_prediction(self):
         result = analyze_profile(SAMPLE_PROFILE)
 
-        self.assertEqual(len(result["next_steps"]), 5)
+        self.assertGreater(len(result["action_plan"]), 0)
+        self.assertLessEqual(len(result["action_plan"]), 3)
+        self.assertEqual(
+            len({item["category"] for item in result["action_plan"]}),
+            len(result["action_plan"]),
+        )
+        for item in result["action_plan"]:
+            self.assertEqual(set(item), {"category", "priority", "action"})
+            self.assertIn(item["priority"], {"High", "Medium", "Low"})
+            self.assertTrue(item["action"])
+            category_status = next(
+                category["status"]
+                for category in result["category_analysis"]
+                if category["category"] == item["category"]
+            )
+            self.assertNotEqual(category_status, "Good")
         self.assertNotIn("top_role", result)
         self.assertNotIn("recommended_roles", result)
-        self.assertTrue(
-            any("job descriptions" in step for step in result["next_steps"])
-        )
+        self.assertNotIn("recommendations", result)
+        self.assertNotIn("next_steps", result)
+        self.assertIsInstance(result["skills"], list)
+        analyzer_output = str(
+            {
+                key: value
+                for key, value in result.items()
+                if key != "ml_prediction"
+            }
+        ).lower()
+        self.assertNotIn("job description", analyzer_output)
+        self.assertNotIn("role match", analyzer_output)
 
 
 class ApiTests(unittest.TestCase):

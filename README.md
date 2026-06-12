@@ -2,11 +2,13 @@
 
 A basic full-stack resume and profile analysis project for students and job
 seekers. The Next.js frontend sends profile text to a reusable Flask API and
-displays an ATS score, grouped skills, strengths, weaknesses, recommended
-roles, and a career roadmap.
+displays a profile score, grouped skills, category feedback, recommended
+career paths, priority improvements, and a career roadmap.
 
-The current Phase 2-5 implementation uses a fixed dummy analysis response.
-Real rule-based analyzer logic will be added in Phase 6.
+Phase 6 uses deterministic, explainable rules for skill detection, profile
+scoring, recommendations, and role alignment. Role suggestions compare the
+submitted profile with fixed skill requirements; they are not live job
+listings or real-time job matching.
 
 ## Tech Stack
 
@@ -67,5 +69,6 @@ All API responses use this shape:
 }
 ```
 
-The current endpoint returns dummy data for the dashboard. It does not yet
-perform resume parsing, ATS analysis, skill detection, or AI-based analysis.
+The endpoint returns deterministic rule-based analysis. It does not perform
+resume upload or document parsing and does not use Gemini, OpenAI, or another
+external AI API.

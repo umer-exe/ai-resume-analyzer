@@ -86,6 +86,16 @@ function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+function clampPercentage(value) {
+  const percentage = Number(value);
+
+  if (!Number.isFinite(percentage)) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(percentage)));
+}
+
 function SectionLabel({ children }) {
   return (
     <p className="text-xs font-semibold tracking-[0.18em] text-[#166534]">
@@ -204,6 +214,9 @@ function StatusBadge({ status }) {
 }
 
 function OverviewTab({ result }) {
+  const score = clampPercentage(result.score);
+  const checks = result.checks ?? {};
+
   return (
     <div className="space-y-5">
       <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
@@ -212,7 +225,7 @@ function OverviewTab({ result }) {
             <SectionLabel>OVERALL SCORE</SectionLabel>
             <div className="mt-3 flex items-center gap-3">
               <p className="text-4xl font-semibold tracking-tight text-[#111827]">
-                {result.score}
+                {score}
                 <span className="text-base font-medium text-[#6B7280]">
                   {" "}
                   / 100
@@ -236,11 +249,11 @@ function OverviewTab({ result }) {
           aria-label="Overall profile score"
           aria-valuemin="0"
           aria-valuemax="100"
-          aria-valuenow={result.score}
+          aria-valuenow={score}
         >
           <div
             className="h-full rounded-full bg-[#166534]"
-            style={{ width: `${result.score}%` }}
+            style={{ width: `${score}%` }}
           />
         </div>
       </section>
@@ -252,7 +265,7 @@ function OverviewTab({ result }) {
             className={`rounded-xl border border-[#E4E2DC] p-4 ${item.fill}`}
           >
             <p className={`text-2xl font-semibold ${item.color}`}>
-              {result.checks[item.key]}
+              {checks[item.key] ?? 0}
             </p>
             <p className="mt-1 text-xs leading-5 text-[#6B7280]">
               {item.label}
@@ -275,43 +288,47 @@ function AnalysisTab({ result }) {
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2">
-        {result.category_analysis.map((item) => (
-          <article
-            key={item.category}
-            className="rounded-xl border border-[#E4E2DC] bg-white p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-[#111827]">
-                  {item.category}
-                </h3>
-                <p className="mt-1 text-2xl font-semibold text-[#111827]">
-                  {item.score}
-                  <span className="text-xs font-medium text-[#6B7280]">
-                    {" "}
-                    / 100
-                  </span>
-                </p>
+        {(result.category_analysis ?? []).map((item) => {
+          const score = clampPercentage(item.score);
+
+          return (
+            <article
+              key={item.category}
+              className="rounded-xl border border-[#E4E2DC] bg-white p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-[#111827]">
+                    {item.category}
+                  </h3>
+                  <p className="mt-1 text-2xl font-semibold text-[#111827]">
+                    {score}
+                    <span className="text-xs font-medium text-[#6B7280]">
+                      {" "}
+                      / 100
+                    </span>
+                  </p>
+                </div>
+                <StatusBadge status={item.status} />
               </div>
-              <StatusBadge status={item.status} />
-            </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#EBEBEB]">
-              <div
-                className="h-full rounded-full bg-[#166534]"
-                style={{ width: `${item.score}%` }}
-              />
-            </div>
-            <p className="mt-3 text-sm leading-5 text-[#6B7280]">
-              {item.feedback}
-            </p>
-          </article>
-        ))}
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#EBEBEB]">
+                <div
+                  className="h-full rounded-full bg-[#166534]"
+                  style={{ width: `${score}%` }}
+                />
+              </div>
+              <p className="mt-3 text-sm leading-5 text-[#6B7280]">
+                {item.feedback}
+              </p>
+            </article>
+          );
+        })}
       </section>
 
       <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
         <SectionLabel>DETECTED SKILLS</SectionLabel>
         <div className="mt-4 space-y-4">
-          {Object.entries(result.skills).map(([category, skills]) => (
+          {Object.entries(result.skills ?? {}).map(([category, skills]) => (
             <div key={category}>
               <p className="text-sm font-semibold text-[#374151]">{category}</p>
               {skills.length > 0 ? (
@@ -360,7 +377,8 @@ function RecommendationsTab({ result }) {
             </div>
           </div>
           <ul className="mt-4 space-y-3 border-t border-[#EBEBEB] pt-4">
-            {result.recommendations[section.key].map((recommendation) => (
+            {(result.recommendations?.[section.key] ?? []).map(
+              (recommendation) => (
               <li
                 key={recommendation}
                 className="flex gap-3 text-sm leading-6 text-[#4B5563]"
@@ -368,7 +386,8 @@ function RecommendationsTab({ result }) {
                 <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9CA3AF]" />
                 <span>{recommendation}</span>
               </li>
-            ))}
+              ),
+            )}
           </ul>
         </section>
       ))}
@@ -377,6 +396,8 @@ function RecommendationsTab({ result }) {
 }
 
 function NextStepsTab({ steps }) {
+  const roadmapSteps = steps ?? [];
+
   return (
     <section className="rounded-xl border border-[#E4E2DC] bg-white p-5">
       <SectionLabel>CAREER ROADMAP</SectionLabel>
@@ -384,9 +405,9 @@ function NextStepsTab({ steps }) {
         Recommended next steps
       </h3>
       <ol className="mt-6">
-        {steps.map((step, index) => (
+        {roadmapSteps.map((step, index) => (
           <li key={step} className="relative flex gap-4 pb-6 last:pb-0">
-            {index < steps.length - 1 && (
+            {index < roadmapSteps.length - 1 && (
               <span className="absolute left-4 top-8 h-full w-px bg-[#E4E2DC]" />
             )}
             <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#D9D7D1] bg-[#F5F4F1] text-xs font-semibold text-[#4B5563]">
@@ -606,7 +627,7 @@ export default function Home() {
               {isLoading ? "Analyzing..." : "Analyze Profile"}
             </button>
             <p className="mt-3 text-center text-xs text-[#9CA3AF]">
-              Current reports use dummy data for Phase 5.5.
+              Rule-based skill alignment only. This is not live job matching.
             </p>
           </form>
 

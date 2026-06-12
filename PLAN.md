@@ -34,6 +34,8 @@ Goal: Add basic skill detection, ATS score, strengths, weaknesses, role recommen
 
 The main analyzer logic should stay inside backend/services so it remains reusable.
 
+Status: Completed with deterministic, explainable rules and skill-based role alignment.
+
 ## Phase 7, Resume Upload
 
 Goal: Add PDF, DOCX, and TXT upload support using PyMuPDF and python-docx.

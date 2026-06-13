@@ -119,4 +119,4 @@ def internal_server_error(_error):
 
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "").lower() in {"1", "true", "yes"}
-    app.run(host="127.0.0.1", port=5000, debug=debug_mode)
+    app.run(host="127.0.0.1", port=8000, debug=debug_mode)

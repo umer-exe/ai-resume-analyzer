@@ -9,10 +9,10 @@ import {
 } from "lucide-react";
 
 import {
-  API_URL,
   LOADING_ITEMS,
   SAMPLE_PROFILES,
 } from "./analyzer-data";
+import { analyzeProfile } from "./api";
 import {
   EmptyState,
   LoadingState,
@@ -151,20 +151,11 @@ export default function Home() {
         formData.append("profile_text", trimmedProfile);
       }
 
-      const [response] = await Promise.all([
-        fetch(API_URL, {
-          method: "POST",
-          body: formData,
-        }),
+      const [result] = await Promise.all([
+        analyzeProfile(formData),
         wait(1500),
       ]);
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.error || "Unable to analyze this profile");
-      }
-
-      setAnalysisResult(payload.data);
+      setAnalysisResult(result);
     } catch (requestError) {
       setErrorMessage(
         (requestError instanceof Error && requestError.message) ||

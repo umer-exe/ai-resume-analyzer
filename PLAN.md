@@ -80,24 +80,21 @@ The reusable API structure is already established:
 * The frontend API endpoint is configurable.
 * The backend can be reused by another frontend without project-specific code.
 
-## Next Phase
-
 ### Phase 7: Resume Upload and Text Extraction
 
-Add PDF, DOCX, and TXT upload support.
+Added single-file PDF, DOCX, and TXT resume upload support:
 
-Planned scope:
+* Files are validated and parsed in memory without permanent storage.
+* PDF text is extracted with PyMuPDF.
+* DOCX paragraphs and table cells are extracted with python-docx.
+* TXT files use UTF-8 text decoding.
+* Extracted text uses the existing analyzer and ML classifier.
+* Direct profile-text analysis remains available.
+* Upload and parser behavior is covered by focused tests.
 
-* Add file selection to the existing input flow.
-* Validate supported file types and file size.
-* Extract text using PyMuPDF, python-docx, or plain-text reading.
-* Pass extracted text into the existing analyzer service.
-* Preserve direct profile-text analysis.
-* Add focused parser and upload API tests.
+Phase 7 does not change the analyzer/ML responsibility boundary.
 
-Phase 7 should not change the analyzer/ML responsibility boundary.
-
-## Final Optional Phase
+## Next Optional Phase
 
 ### Phase 8: Optional AI Upgrade
 

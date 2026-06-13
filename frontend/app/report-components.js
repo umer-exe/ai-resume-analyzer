@@ -73,8 +73,8 @@ export function EmptyState() {
           Ready to analyze your resume?
         </h2>
         <p className="mt-2 max-w-lg text-sm leading-6 text-[#6B7280]">
-          Paste your resume text, profile details, or professional summary to
-          generate a structured career-readiness report.
+          Paste your resume text or upload a PDF, DOCX, or TXT file to generate
+          a structured career-readiness report.
         </p>
       </div>
 

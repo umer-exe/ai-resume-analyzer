@@ -4,8 +4,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from services.analyzer import analyze_profile as run_analysis
+from services.resume_parser import ResumeParseError, extract_resume_text
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 CORS(app)
 
 
@@ -37,16 +39,33 @@ def index():
 @app.post("/api/v1/analyze")
 def analyze_profile():
     profile_text = request.form.get("profile_text", "").strip()
+    resume_file = request.files.get("resume_file")
+    has_resume_file = bool(resume_file and resume_file.filename)
 
-    if not profile_text:
+    if profile_text and has_resume_file:
         return api_response(
             False,
-            error="Profile text is required",
+            error="Provide either profile text or a resume file, not both",
+            status_code=400,
+        )
+
+    if not profile_text and not has_resume_file:
+        return api_response(
+            False,
+            error="Profile text or a resume file is required",
             status_code=400,
         )
 
     try:
+        if has_resume_file:
+            profile_text = extract_resume_text(resume_file)
         analysis_data = run_analysis(profile_text)
+    except ResumeParseError as error:
+        return api_response(
+            False,
+            error=str(error),
+            status_code=400,
+        )
     except Exception:
         app.logger.exception("Profile analysis failed")
         return api_response(
@@ -64,6 +83,15 @@ def route_not_found(_error):
         False,
         error="Route not found",
         status_code=404,
+    )
+
+
+@app.errorhandler(413)
+def request_too_large(_error):
+    return api_response(
+        False,
+        error="Resume file must be 5 MB or smaller",
+        status_code=413,
     )
 
 

@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  ChevronDown,
+  FileText,
+  Upload,
+  X,
+} from "lucide-react";
 
 import {
   API_URL,
@@ -19,13 +24,47 @@ function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const SUPPORTED_FILE_EXTENSIONS = [".pdf", ".docx", ".txt"];
+
+function getFileExtension(filename) {
+  const extensionStart = filename.lastIndexOf(".");
+  return extensionStart >= 0
+    ? filename.slice(extensionStart).toLowerCase()
+    : "";
+}
+
+function formatFileSize(sizeInBytes) {
+  if (sizeInBytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(sizeInBytes / 1024))} KB`;
+  }
+
+  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function Home() {
   const [profileText, setProfileText] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [completedStepCount, setCompletedStepCount] = useState(0);
   const [activeTab, setActiveTab] = useState("Overview");
+  const fileInputRef = useRef(null);
+
+  function resetReportState() {
+    setErrorMessage("");
+    setAnalysisResult(null);
+    setActiveTab("Overview");
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
 
   function handleSampleProfileChange(event) {
     const selectedProfile = SAMPLE_PROFILES.find(
@@ -36,18 +75,49 @@ export default function Home() {
       return;
     }
 
+    clearSelectedFile();
     setProfileText(selectedProfile.value);
-    setErrorMessage("");
-    setAnalysisResult(null);
-    setActiveTab("Overview");
+    resetReportState();
   }
 
   function handleProfileTextChange(event) {
+    clearSelectedFile();
     setProfileText(event.target.value);
 
     if (errorMessage) {
       setErrorMessage("");
     }
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const extension = getFileExtension(file.name);
+
+    if (!SUPPORTED_FILE_EXTENSIONS.includes(extension)) {
+      clearSelectedFile();
+      setErrorMessage("Upload a PDF, DOCX, or TXT file");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      clearSelectedFile();
+      setErrorMessage("Resume file must be 5 MB or smaller");
+      return;
+    }
+
+    setSelectedFile(file);
+    setProfileText("");
+    resetReportState();
+  }
+
+  function handleRemoveFile() {
+    clearSelectedFile();
+    resetReportState();
   }
 
   async function handleSubmit(event) {
@@ -58,8 +128,8 @@ export default function Home() {
 
     const trimmedProfile = profileText.trim();
 
-    if (!trimmedProfile) {
-      setErrorMessage("Profile text is required");
+    if (!trimmedProfile && !selectedFile) {
+      setErrorMessage("Profile text or a resume file is required");
       return;
     }
 
@@ -74,7 +144,12 @@ export default function Home() {
 
     try {
       const formData = new FormData();
-      formData.append("profile_text", trimmedProfile);
+
+      if (selectedFile) {
+        formData.append("resume_file", selectedFile);
+      } else {
+        formData.append("profile_text", trimmedProfile);
+      }
 
       const [response] = await Promise.all([
         fetch(API_URL, {
@@ -162,7 +237,62 @@ export default function Home() {
               className="mt-2.5 min-h-64 w-full resize-y rounded-xl border border-[#D8D5CD] bg-[#FEFEFD] px-4 py-3 text-sm leading-6 text-[#17201B] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#166534] focus:ring-2 focus:ring-[#166534]/12 disabled:cursor-not-allowed disabled:bg-[#F9FAFB]"
               placeholder="Paste your resume text, profile details, or professional summary here..."
             />
-            <p className="mt-2 text-xs leading-5 text-[#6B7280]">
+
+            <div className="my-5 flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-[#E7E4DD]" />
+              <span className="text-[11px] font-semibold tracking-[0.16em] text-[#9CA3AF]">
+                OR
+              </span>
+              <span className="h-px flex-1 bg-[#E7E4DD]" />
+            </div>
+
+            <div>
+              <label
+                htmlFor="resume-file"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#CFCBC1] bg-[#FAFAF8] px-4 py-4 text-sm font-semibold text-[#166534] transition hover:border-[#166534]/50 hover:bg-[#F4FAF5]"
+              >
+                <Upload className="h-4 w-4" />
+                Upload resume
+              </label>
+              <input
+                ref={fileInputRef}
+                id="resume-file"
+                name="resume_file"
+                type="file"
+                accept=".pdf,.docx,.txt"
+                onChange={handleFileChange}
+                disabled={isLoading}
+                className="sr-only"
+              />
+              <p className="mt-2 text-center text-xs text-[#6B7280]">
+                PDF, DOCX, or TXT up to 5 MB
+              </p>
+            </div>
+
+            {selectedFile && (
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#CDE8D2] bg-[#F4FAF5] px-3 py-3">
+                <FileText className="h-4 w-4 shrink-0 text-[#166534]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[#17201B]">
+                    {selectedFile.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#6B7280]">
+                    {formatFileSize(selectedFile.size)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveFile}
+                  disabled={isLoading}
+                  aria-label="Remove selected resume"
+                  className="rounded-lg p-1.5 text-[#6B7280] transition hover:bg-white hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <p className="mt-3 text-xs leading-5 text-[#6B7280]">
               Tip: Include your skills, experience, education, and projects.
             </p>
 

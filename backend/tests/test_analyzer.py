@@ -217,7 +217,7 @@ class ApiTests(unittest.TestCase):
             {
                 "success": False,
                 "data": None,
-                "error": "Profile text is required",
+                "error": "Profile text or a resume file is required",
             },
         )
 

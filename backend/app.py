@@ -4,10 +4,17 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from services.analyzer import analyze_profile as run_analysis
-from services.resume_parser import ResumeParseError, extract_resume_text
+from services.resume_parser import (
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MESSAGE,
+    ResumeFileTooLargeError,
+    ResumeParseError,
+    extract_resume_text,
+)
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+# Allow a small amount of multipart metadata beyond the actual file limit.
+app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_BYTES + (64 * 1024)
 CORS(app)
 
 
@@ -60,6 +67,12 @@ def analyze_profile():
         if has_resume_file:
             profile_text = extract_resume_text(resume_file)
         analysis_data = run_analysis(profile_text)
+    except ResumeFileTooLargeError as error:
+        return api_response(
+            False,
+            error=str(error),
+            status_code=413,
+        )
     except ResumeParseError as error:
         return api_response(
             False,
@@ -90,7 +103,7 @@ def route_not_found(_error):
 def request_too_large(_error):
     return api_response(
         False,
-        error="Resume file must be 5 MB or smaller",
+        error=MAX_FILE_SIZE_MESSAGE,
         status_code=413,
     )
 

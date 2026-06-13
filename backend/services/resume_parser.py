@@ -8,10 +8,16 @@ from docx import Document
 
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024
+MAX_FILE_SIZE_MESSAGE = "Resume file must be 2 MB or smaller"
 
 
 class ResumeParseError(ValueError):
     """Raised when an uploaded resume cannot be safely parsed."""
+
+
+class ResumeFileTooLargeError(ResumeParseError):
+    """Raised when an uploaded resume exceeds the file-size limit."""
 
 
 def _normalize_text(text):
@@ -80,6 +86,8 @@ def extract_resume_text(uploaded_file):
     file_bytes = uploaded_file.read()
     if not file_bytes:
         raise ResumeParseError("Uploaded file is empty")
+    if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+        raise ResumeFileTooLargeError(MAX_FILE_SIZE_MESSAGE)
 
     extractors = {
         ".pdf": _extract_pdf,

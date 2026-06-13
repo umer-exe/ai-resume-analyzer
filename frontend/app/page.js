@@ -24,7 +24,7 @@ function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const SUPPORTED_FILE_EXTENSIONS = [".pdf", ".docx", ".txt"];
 
 function getFileExtension(filename) {
@@ -106,7 +106,7 @@ export default function Home() {
 
     if (file.size > MAX_FILE_SIZE) {
       clearSelectedFile();
-      setErrorMessage("Resume file must be 5 MB or smaller");
+      setErrorMessage("Resume file must be 2 MB or smaller");
       return;
     }
 
@@ -199,9 +199,6 @@ export default function Home() {
             <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#111827]">
               Paste your resume or profile
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[#6B7280]">
-              Use resume text, profile details, or a professional summary.
-            </p>
 
             <div className="mt-5 flex items-center justify-between gap-3">
               <label
@@ -265,7 +262,7 @@ export default function Home() {
                 className="sr-only"
               />
               <p className="mt-2 text-center text-xs text-[#6B7280]">
-                PDF, DOCX, or TXT up to 5 MB
+                PDF, DOCX, or TXT up to 2 MB
               </p>
             </div>
 

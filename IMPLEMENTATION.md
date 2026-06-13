@@ -63,7 +63,7 @@ prediction comes only from the trained ML classifier.
 * Optional backend debug mode: `FLASK_DEBUG=1`
 * Local training data: `backend/data/resume_dataset.csv`
 * Supported resume files: PDF, DOCX, and UTF-8 TXT
-* Maximum upload request size: 5 MB
+* Maximum resume file size: 2 MB
 
 `backend/data/` and uploaded-file storage are ignored by Git. Resume uploads
 are not written to `backend/uploads/`.

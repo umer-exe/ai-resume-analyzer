@@ -7,7 +7,12 @@ from docx import Document
 from werkzeug.datastructures import FileStorage
 
 from app import app
-from services.resume_parser import ResumeParseError, extract_resume_text
+from services.resume_parser import (
+    MAX_FILE_SIZE_BYTES,
+    ResumeFileTooLargeError,
+    ResumeParseError,
+    extract_resume_text,
+)
 
 
 SAMPLE_TEXT = "Python developer\nFlask and SQL projects"
@@ -104,6 +109,28 @@ class ResumeParserTests(unittest.TestCase):
             with self.subTest(filename=filename, size=len(file_bytes)):
                 with self.assertRaises(ResumeParseError):
                     extract_resume_text(uploaded_file(filename, file_bytes))
+
+    def test_rejects_file_larger_than_two_megabytes(self):
+        with self.assertRaisesRegex(
+            ResumeFileTooLargeError,
+            "Resume file must be 2 MB or smaller",
+        ):
+            extract_resume_text(
+                uploaded_file(
+                    "resume.txt",
+                    b"x" * (MAX_FILE_SIZE_BYTES + 1),
+                )
+            )
+
+    def test_accepts_file_at_two_megabytes(self):
+        result = extract_resume_text(
+            uploaded_file(
+                "resume.txt",
+                b"x" * MAX_FILE_SIZE_BYTES,
+            )
+        )
+
+        self.assertEqual(len(result), MAX_FILE_SIZE_BYTES)
 
     def test_rejects_password_protected_pdf(self):
         with self.assertRaisesRegex(
@@ -228,7 +255,7 @@ class ResumeUploadApiTests(unittest.TestCase):
             "/api/v1/analyze",
             data={
                 "resume_file": (
-                    BytesIO(b"x" * (5 * 1024 * 1024 + 1)),
+                    BytesIO(b"x" * (MAX_FILE_SIZE_BYTES + 1)),
                     "resume.txt",
                 )
             },
@@ -240,7 +267,7 @@ class ResumeUploadApiTests(unittest.TestCase):
             {
                 "success": False,
                 "data": None,
-                "error": "Resume file must be 5 MB or smaller",
+                "error": "Resume file must be 2 MB or smaller",
             },
         )
 

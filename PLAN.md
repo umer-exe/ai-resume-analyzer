@@ -65,8 +65,7 @@ Refactored the completed Phase 6.6 code without changing application behavior:
   `analyzer_rules.py`.
 * Kept `analyzer.py` focused on extraction, scoring, summaries, and action plans.
 * Renamed tests by responsibility and isolated analyzer tests from the ML model.
-* Renamed the ML entry point to `predict_category()` while retaining a
-  compatibility alias.
+* Renamed the ML entry point to `predict_category()`.
 * Split the frontend into `page.js`, `analyzer-data.js`, and
   `report-components.js`.
 * Added environment-based API and debug configuration.

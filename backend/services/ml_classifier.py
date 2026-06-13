@@ -116,7 +116,3 @@ def predict_category(profile_text):
     except Exception:
         logger.exception("Unable to generate ML category prediction")
         return _prediction_response(message="ML prediction is unavailable")
-
-
-# Temporary compatibility alias for callers using the earlier Phase 6.5 name.
-predict_role = predict_category
